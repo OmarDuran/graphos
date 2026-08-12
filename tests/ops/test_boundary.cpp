@@ -1,0 +1,79 @@
+#include "graphos/ops/boundary.hpp"
+
+#include "graphos/ops/cut.hpp"
+#include "graphos/ops/subcomplex.hpp"
+
+#include "fixtures.hpp"
+#include "graphos_test.hpp"
+
+using graphos::Index;
+
+GRAPHOS_TEST(disk_facets_split_into_boundary_and_interior) {
+  const graphos::Complex c = graphos_test::make_two_triangle_disk();
+  const auto cls = graphos::classify_facets(c);
+  CHECK(cls.interior.marked(1, 0));  // the shared edge
+  CHECK(cls.interior.marked_count(1) == 1);
+  CHECK(cls.boundary.marked_count(1) == 4);
+  CHECK(cls.free.marked_count(1) == 0);
+  CHECK(cls.nonmanifold.marked_count(1) == 0);
+}
+
+// After a through-cut, the detached interface original has no cofaces
+// (free), and every remaining bulk edge sees exactly one triangle.
+GRAPHOS_TEST(cut_turns_interface_free_and_copies_into_boundary) {
+  const graphos::Complex c = graphos_test::make_two_triangle_disk();
+  graphos::Marker interface(c);
+  interface.mark(1, 0);
+  const auto cut = graphos::cut_along(c, interface);
+
+  const auto cls = graphos::classify_facets(cut.complex);
+  CHECK(cls.free.marked(1, 0));  // the fracture domain cell
+  CHECK(cls.free.marked_count(1) == 1);
+  CHECK(cls.boundary.marked_count(1) == 6);  // both triangles fully exposed
+  CHECK(cls.interior.marked_count(1) == 0);
+}
+
+// Three triangles glued along one edge — a "book" — make that edge
+// nonmanifold.
+GRAPHOS_TEST(book_spine_is_nonmanifold) {
+  graphos::Complex c(2);
+  c.attach_vertices(5);
+  c.attach_cell(1, {0, 1}, {-1, +1});  // the spine
+  c.attach_cell(1, {1, 2}, {-1, +1});
+  c.attach_cell(1, {2, 0}, {-1, +1});
+  c.attach_cell(1, {1, 3}, {-1, +1});
+  c.attach_cell(1, {3, 0}, {-1, +1});
+  c.attach_cell(1, {1, 4}, {-1, +1});
+  c.attach_cell(1, {4, 0}, {-1, +1});
+  c.attach_cell(2, {0, 1, 2}, {+1, +1, +1});
+  c.attach_cell(2, {0, 3, 4}, {+1, +1, +1});
+  c.attach_cell(2, {0, 5, 6}, {+1, +1, +1});
+  c.validate();
+  CHECK(graphos::d_squared_is_zero(c));
+
+  const auto cls = graphos::classify_facets(c);
+  CHECK(cls.nonmanifold.marked(1, 0));
+  CHECK(cls.nonmanifold.marked_count(1) == 1);
+  CHECK(cls.boundary.marked_count(1) == 6);
+  CHECK(cls.interior.marked_count(1) == 0);
+}
+
+// The composition the op exists for: extract ∂Ω as its own complex.
+GRAPHOS_TEST(boundary_complex_of_a_disk_is_a_circle) {
+  const graphos::Complex c = graphos_test::make_two_triangle_disk();
+  const auto sub = graphos::subcomplex(c, graphos::classify_facets(c).boundary);
+  sub.complex.validate();
+  CHECK(sub.complex.count(0) == 4);
+  CHECK(sub.complex.count(1) == 4);
+  CHECK(sub.complex.count(2) == 0);
+  CHECK(graphos::d_squared_is_zero(sub.complex));
+  CHECK(graphos::euler_characteristic(sub.complex) == 0);  // a circle
+}
+
+GRAPHOS_TEST(rejects_zero_dimensional_complex) {
+  graphos::Complex c(0);
+  c.attach_vertices(3);
+  CHECK_THROWS(graphos::classify_facets(c));
+}
+
+GRAPHOS_TEST_MAIN()

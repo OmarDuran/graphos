@@ -14,6 +14,8 @@ set(GRAPHOS_UNIT_TESTS
   ops/test_pushout
   ops/test_star_deletion
   ops/test_cut
+  ops/test_subcomplex
+  ops/test_boundary
 )
 
 foreach(t IN LISTS GRAPHOS_UNIT_TESTS)

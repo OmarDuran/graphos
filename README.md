@@ -26,7 +26,9 @@ graphos speaks computational topology:
 | **coboundary δ_k** | `coboundary(c, k)` — the signed transpose of ∂_{k+1}; applying it to a k-cochain is the discrete differential |
 | **frozen complex** | `freeze(c)` → `FrozenComplex` — the immutable query object: ∂ and δ in device-capable storage (`exec::Array`, the CHAI seam), host row access, kernel views |
 | **star / closure / link** | `FrozenComplex::star/closure/link(k, cell)` — st(σ), cl(σ), lk(σ) = cl(st(σ)) \ st(cl(σ)); the queries NetworkX views will sit on |
-| **marker** | `Marker` — locally-evaluated, collectively-meaningful cell selection (`mark`, `mark_where(k, pred)`); the argument form of `cut_along` and `star_deletion` |
+| **marker** | `Marker` — locally-evaluated, collectively-meaningful cell selection (`mark`, `mark_where(k, pred)`); the argument form of every cell-selecting op |
+| **closed subcomplex** | `subcomplex(c, marker)` — cl(marked): the marked cells with their full closure, extracted as its own complex with both chain maps (parent→sub and the embedding sub→parent). Fracture domains, material regions, boundary complexes, k-skeleta |
+| **facet classification** | `classify_facets(c)` — every (n−1)-cell into exactly one of: free (0 cofaces — detached interface domains), boundary (1 — ∂Ω), interior (2), nonmanifold (3+ — DFN junctions). Compose with `subcomplex` to extract ∂Ω |
 
 Decisions that require geometry ("these two vertices are the same point")
 enter as explicit `Identification` inputs; everything downstream is
@@ -69,7 +71,7 @@ Every public operation carries one of three contracts (PETSc vocabulary):
 
 | Contract | Meaning | Operations |
 |---|---|---|
-| **Collective** | All ranks call it, same order; result is globally consistent | `disjoint_union`, `cut_along`, `star_deletion`, `freeze`, `count`, `validate`, `d_squared_is_zero`, `euler_characteristic` |
+| **Collective** | All ranks call it, same order; result is globally consistent | `disjoint_union`, `cut_along`, `star_deletion`, `subcomplex`, `classify_facets`, `freeze`, `count`, `validate`, `d_squared_is_zero`, `euler_characteristic` |
 | **Logically collective** | All ranks participate; arguments are supplied per-rank for locally owned cells | `quotient`, `pushout` (identifications) |
 | **Local** | Per-rank, no communication; correct within the ghost ring | `star`, `closure`, `link`, row access, views |
 
