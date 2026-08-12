@@ -182,15 +182,59 @@ dialects, which surfaces as parse errors like
 path (`~/spack/bin/spack …`) or fix your `PATH`.
 
 **Bootstrap error `No module named 'clingo.ast'`** — the binary-cached
-concretizer does not match your Python. Bootstrap from source instead:
+concretizer does not match your Python. The most reliable fix is installing
+clingo directly into the Python Spack runs on (bypasses bootstrap entirely):
 
 ```bash
-spack bootstrap disable github-actions-v2
+$(spack python -c "import sys; print(sys.executable)") -m pip install clingo
+```
+
+**macOS: builds fail instantly with an empty log** (`make: no such file`) —
+Apple's `/usr/bin/make` is the ancient 3.81 and Homebrew installs GNU make
+as `gmake` only, while Spack invokes `<prefix>/bin/make`. Install
+`brew install make`, create a shim providing the `make` name, and register
+it:
+
+```bash
+mkdir -p ~/.spack/shims/bin && ln -sf /opt/homebrew/bin/gmake ~/.spack/shims/bin/make
+```
+
+then in `~/.spack/packages.yaml`:
+
+```yaml
+packages:
+  gmake:
+    externals:
+    - spec: gmake@4.4.1
+      prefix: ~/.spack/shims
+    buildable: false
+```
+
+**macOS: TPL builds fail with `unsupported option '-mcpu='` or
+`-arch x86_64` appearing on an arm64 machine** — Spack is running on an
+Intel (Rosetta) Python, typically from an x86_64 miniconda
+(`file $(spack python -c "import sys; print(sys.executable)")` to check).
+Every universal binary the build spawns (shell, clang, CMake) then prefers
+its x86_64 slice, so CMake targets x86_64 while Spack emits arm64 tuning
+flags. Point Spack at a native arm64 Python (and give it clingo):
+
+```bash
+/opt/homebrew/bin/python3 -m pip install --break-system-packages clingo
 ```
 
 ```bash
-spack bootstrap now
+export SPACK_PYTHON=/opt/homebrew/bin/python3
 ```
+
+(Add the export to your shell profile so it sticks.)
+
+**macOS: `consteval function ... is not a constant expression` errors from
+`fmt/format-inl.h` when building with Umpire/CHAI** — Umpire's default
+`+fmt_header_only` exports `FMT_HEADER_ONLY` to consumers, inlining fmt's
+implementation into every C++20 translation unit, which breaks with recent
+AppleClang and the fmt ≤ 11.0 this Umpire line pins. The bundled
+[spack.yaml](spack.yaml) sets `umpire ~fmt_header_only` for this reason;
+keep that variant if you edit the environment.
 
 **Install export was skipped** — you configured with `GRAPHOS_FETCH_TPL=ON`.
 That mode is for development; install builds must find the TPLs via

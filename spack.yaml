@@ -37,5 +37,11 @@ spack:
           compilers:
             c: /usr/bin/clang
             cxx: /usr/bin/clang++
+    # +fmt_header_only exports FMT_HEADER_ONLY to consumers, inlining fmt's
+    # implementation into every TU — which breaks under C++20 consteval with
+    # recent AppleClang (fmt <= 11.0 is pinned by this umpire line). Linking
+    # the compiled fmt avoids the broken code path entirely.
+    umpire:
+      require: ~fmt_header_only
     all:
       variants: ~examples ~tests
