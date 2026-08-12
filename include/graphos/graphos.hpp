@@ -1,9 +1,11 @@
 #pragma once
 
+#include "graphos/core/coboundary.hpp"
 #include "graphos/core/complex.hpp"
 #include "graphos/core/types.hpp"
 #include "graphos/exec/forall.hpp"
 #include "graphos/exec/memory.hpp"
+#include "graphos/ops/cut.hpp"
 #include "graphos/ops/disjoint_union.hpp"
 #include "graphos/ops/pushout.hpp"
 #include "graphos/ops/quotient.hpp"

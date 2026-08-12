@@ -1,0 +1,12 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+if(@GRAPHOS_ENABLE_RAJA@)
+  find_dependency(RAJA)
+endif()
+if(@GRAPHOS_ENABLE_UMPIRE@)
+  find_dependency(umpire)
+endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/graphosTargets.cmake")
+check_required_components(graphos)

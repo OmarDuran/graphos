@@ -3,7 +3,9 @@ project(graphos VERSION 0.1.0 LANGUAGES CXX)
 
 add_library(graphos INTERFACE)
 add_library(graphos::graphos ALIAS graphos)
-target_include_directories(graphos INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(graphos INTERFACE
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
 target_compile_features(graphos INTERFACE cxx_std_20)
 
 # Hardware portability seams. Off by default so the host fallback builds with
@@ -49,4 +51,35 @@ endif()
 include(CTest)
 if(BUILD_TESTING AND PROJECT_IS_TOP_LEVEL)
   add_subdirectory(tests)
+endif()
+
+# ---- installation ----------------------------------------------------------
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+if(GRAPHOS_FETCH_TPL AND (GRAPHOS_ENABLE_RAJA OR GRAPHOS_ENABLE_UMPIRE))
+  # FetchContent'd TPLs have no install export to reference; fetch builds are
+  # a development convenience, install against find_package'd TPLs instead
+  message(STATUS "graphos: GRAPHOS_FETCH_TPL build - skipping CMake package export")
+else()
+  install(TARGETS graphos EXPORT graphosTargets)
+  install(EXPORT graphosTargets
+          FILE graphosTargets.cmake
+          NAMESPACE graphos::
+          DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/graphos)
+  configure_package_config_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/graphosConfig.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/graphosConfig.cmake
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/graphos)
+  write_basic_package_version_file(
+    ${CMAKE_CURRENT_BINARY_DIR}/graphosConfigVersion.cmake
+    COMPATIBILITY SameMinorVersion
+    ARCH_INDEPENDENT)
+  install(FILES
+          ${CMAKE_CURRENT_BINARY_DIR}/graphosConfig.cmake
+          ${CMAKE_CURRENT_BINARY_DIR}/graphosConfigVersion.cmake
+          DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/graphos)
 endif()

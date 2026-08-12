@@ -22,6 +22,8 @@ graphos speaks computational topology:
 | **parallel cells** | `find_parallel_cells(c, k)` — cells with equal boundary chains up to a uniform flip |
 | **pushout A ⊔_C B** | `pushout(a, b, vertex_identifications)` — union glued along the shared subcomplex; the combinatorial core of BRep/domain union and mesh conformity |
 | **star deletion** | `star_deletion(c, cells)` — remove cells and their closed stars (upward cascade); the combinatorial core of domain difference |
+| **cutting along a subcomplex** | `cut_along(c, interface_cells)` — split the complex along an interface: sides are connected components of each closure cell's cut star, each side gets a copy, originals survive as the detached interface (fracture) domain. Tips/rims (one side) are not copied; junctions (3+ sides) get one copy per side. Purely topological — no geometric side test needed |
+| **coboundary** | `coboundary(c, k)` — unsigned upward adjacency (sparsity transpose of ∂_{k+1}) |
 
 Decisions that require geometry ("these two vertices are the same point")
 enter as explicit `Identification` inputs; everything downstream is
@@ -49,14 +51,28 @@ combinatorial.
      the frozen/builder split, since CHAI's copy-on-context semantics
      presuppose frozen storage. Device execution policies follow from it.
 
-## Build and test
+## Build, test, install
 
 ```bash
-cmake -S . -B build && cmake --build build && ctest --test-dir build
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j 8
+ctest --test-dir build
+cmake --install build --prefix ~/opt/graphos
 ```
 
+Consume the installed package with `find_package(graphos CONFIG REQUIRED)`
+and link `graphos::graphos` (point `CMAKE_PREFIX_PATH` at the prefix if it
+is not a system location).
+
 Requires CMake ≥ 3.20 and a C++20 compiler; the default build has no other
-dependencies (header-only, `graphos::graphos` CMake target). Portability
+dependencies (header-only, `graphos::graphos` CMake target).
+
+Unit tests mirror the include tree — one test file per header, one ctest
+entry per file (`tests/core/test_complex.cpp` ↔
+`include/graphos/core/complex.hpp`, registered as `core.test_complex`), with
+a zero-dependency harness in `tests/graphos_test.hpp` and shared complexes
+in `tests/fixtures.hpp`. Run a single suite with e.g.
+`ctest --test-dir build -R ops.test_cut`. Portability
 options:
 
 ```bash
@@ -68,10 +84,10 @@ FetchContent; without it they are located with `find_package`.
 
 ## Roadmap
 
-1. Interface split / conformity cut (vertex duplication along a cut set) with
-   topological side classification.
-2. Derived operators: coboundary (transposes), multi-level closures, star and
-   link queries, fixed-arity strided storage for single-cell-type complexes.
+1. Kernel-form port of `cut_along` (side labeling as parallel label
+   propagation) and `quotient`; 3D cut coverage (branching fracture tests).
+2. Derived operators: signed coboundary, multi-level closures, star and link
+   queries, fixed-arity strided storage for single-cell-type complexes.
 3. Frozen/builder split; persistent storage on CHAI/Umpire; device execution
    policies (CUDA/HIP/SYCL) for the bulk kernels.
 4. Python bindings (pybind11) with opaque handles; NetworkX 3.x backend
