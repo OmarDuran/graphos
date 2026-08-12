@@ -1,0 +1,6 @@
+add_executable(graphos_tests test_main.cpp)
+target_link_libraries(graphos_tests PRIVATE graphos::graphos)
+if(NOT MSVC)
+  target_compile_options(graphos_tests PRIVATE -Wall -Wextra)
+endif()
+add_test(NAME graphos_tests COMMAND graphos_tests)
