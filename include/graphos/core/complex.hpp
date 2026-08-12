@@ -2,6 +2,7 @@
 
 #include <cstdlib>
 #include <initializer_list>
+#include <limits>
 #include <map>
 #include <span>
 #include <stdexcept>
@@ -29,6 +30,12 @@ struct BoundaryOperator {
   void append_row(std::span<const Index> row_indices, std::span<const Sign> row_signs) {
     if (row_indices.size() != row_signs.size()) {
       throw std::invalid_argument("BoundaryOperator::append_row: indices/signs size mismatch");
+    }
+    // offsets are Index-typed: one operator's nnz is capped at Index max
+    // (~2.1e9). Guard loudly rather than overflow silently at scale.
+    if (indices.size() + row_indices.size() >
+        static_cast<std::size_t>(std::numeric_limits<Index>::max())) {
+      throw std::overflow_error("BoundaryOperator: nnz exceeds Index capacity");
     }
     indices.insert(indices.end(), row_indices.begin(), row_indices.end());
     signs.insert(signs.end(), row_signs.begin(), row_signs.end());

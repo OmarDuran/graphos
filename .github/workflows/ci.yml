@@ -1,0 +1,68 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-gcc-release
+            os: ubuntu-latest
+            cc: gcc
+            cxx: g++
+            build_type: Release
+            sanitize: ""
+          - name: linux-clang-sanitize
+            os: ubuntu-latest
+            cc: clang
+            cxx: clang++
+            build_type: Debug
+            sanitize: address,undefined
+          - name: macos-release
+            os: macos-latest
+            cc: clang
+            cxx: clang++
+            build_type: Release
+            sanitize: ""
+    env:
+      CC: ${{ matrix.cc }}
+      CXX: ${{ matrix.cxx }}
+      # make UBSan findings fail the run instead of just logging
+      UBSAN_OPTIONS: halt_on_error=1
+      ASAN_OPTIONS: strict_string_checks=1:detect_stack_use_after_return=1
+    steps:
+      - uses: actions/checkout@v4
+      - name: configure
+        run: >
+          cmake -S . -B build
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+          -DGRAPHOS_SANITIZE=${{ matrix.sanitize }}
+      - name: build
+        run: cmake --build build -j 4
+      - name: test
+        run: ctest --test-dir build --output-on-failure
+      - name: bench smoke
+        run: ./build/bench/graphos_bench 8
+
+  raja:
+    name: linux-raja-fetched
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: configure
+        run: >
+          cmake -S . -B build
+          -DCMAKE_BUILD_TYPE=Release
+          -DGRAPHOS_ENABLE_RAJA=ON
+          -DGRAPHOS_FETCH_TPL=ON
+      - name: build
+        run: cmake --build build -j 4
+      - name: test
+        run: ctest --test-dir build --output-on-failure

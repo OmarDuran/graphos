@@ -1,0 +1,6 @@
+add_executable(graphos_bench bench_main.cpp)
+target_link_libraries(graphos_bench PRIVATE graphos::graphos)
+target_include_directories(graphos_bench PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+if(NOT MSVC)
+  target_compile_options(graphos_bench PRIVATE -O3 -Wall -Wextra)
+endif()

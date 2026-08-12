@@ -1,0 +1,2 @@
+[networkx.backends]
+graphos = graphos.nx.backend:GraphosBackend

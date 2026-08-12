@@ -1,0 +1,18 @@
+[build-system]
+requires = ["scikit-build-core>=0.10", "pybind11>=3.0"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "graphos"
+version = "0.1.0"
+description = "A metric-free computational topology engine"
+requires-python = ">=3.10"
+dependencies = ["numpy"]
+
+[project.optional-dependencies]
+networkx = ["networkx>=3.3"]
+
+# installed distributions register the NetworkX backend automatically;
+# source-tree runs call graphos.nx.register() instead
+[project.entry-points."networkx.backends"]
+graphos = "graphos.nx.backend:GraphosBackend"

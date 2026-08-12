@@ -13,9 +13,25 @@
 # or +rocm amdgpu_target=gfx90a for AMD.
 spack:
   specs:
-  - raja@2024.07.0
-  - umpire@2024.07.0
-  - chai@2024.07.0
+  # +openmp on RAJA only: its for_policy becomes omp_parallel_for_exec, so
+  # every kernel-form op parallelizes with zero code change. On AppleClang
+  # the OpenMP runtime comes from llvm-openmp (apple-clang ships none) —
+  # a dependency only RAJA's package declares, so umpire/chai stay ~openmp
+  # (their variants gate internal threading the exec seams never use).
+  #
+  # AppleClang wrinkle: CMake's FindOpenMP reports "-Xclang -fopenmp" as a
+  # single string and BLT forwards it as ONE quoted compiler argument, and
+  # BLT's link flags omit libomp. Patch the INSTALLED blt's
+  # cmake/thirdparty/BLTSetupOpenMP.cmake before building this line:
+  #   separate_arguments(OpenMP_CXX_FLAGS UNIX_COMMAND "${OpenMP_CXX_FLAGS}")
+  #   after find_package(OpenMP), and append ${OpenMP_CXX_LIBRARIES} to the
+  #   default _link_flags. (Upstream: BLT flag lists vs strings.)
+  # Also pre-seed OpenMP_omp_LIBRARY from CMAKE_PREFIX_PATH (NO_DEFAULT_PATH)
+  # before that find_package: a stray libomp on default search paths (e.g.
+  # /usr/local/bin) otherwise shadows llvm-openmp with a broken install name.
+  - raja@2024.07.0+openmp
+  - umpire@2024.07.0~openmp
+  - chai@2024.07.0~openmp
   concretizer:
     unify: true
   view: true

@@ -57,9 +57,38 @@ if(GRAPHOS_ENABLE_CHAI)
   target_compile_definitions(graphos INTERFACE GRAPHOS_HAVE_CHAI)
 endif()
 
+# Comma-separated sanitizer list applied to everything built in this tree
+# (e.g. -DGRAPHOS_SANITIZE=address,undefined). Top-level builds only.
+set(GRAPHOS_SANITIZE "" CACHE STRING "Sanitizers for tests/bench (e.g. address,undefined)")
+if(GRAPHOS_SANITIZE AND PROJECT_IS_TOP_LEVEL)
+  add_compile_options(-fsanitize=${GRAPHOS_SANITIZE} -fno-omit-frame-pointer -g)
+  add_link_options(-fsanitize=${GRAPHOS_SANITIZE})
+endif()
+
+
+# dylibs from the prefix path (libomp, umpire, chai) carry @rpath install
+# names: carry the rpath on the INTERFACE target so every consumer's
+# executables resolve them, whoever configures the parent project
+foreach(_prefix IN LISTS CMAKE_PREFIX_PATH)
+  list(APPEND CMAKE_BUILD_RPATH "${_prefix}/lib")
+  if(NOT MSVC)
+    target_link_options(graphos INTERFACE "-Wl,-rpath,${_prefix}/lib")
+  endif()
+endforeach()
+
 include(CTest)
 if(BUILD_TESTING AND PROJECT_IS_TOP_LEVEL)
   add_subdirectory(tests)
+endif()
+
+option(GRAPHOS_BUILD_BENCH "Build the benchmark driver" ON)
+if(GRAPHOS_BUILD_BENCH AND PROJECT_IS_TOP_LEVEL)
+  add_subdirectory(bench)
+endif()
+
+option(GRAPHOS_BUILD_PYTHON "Build the Python bindings (graphos._core)" OFF)
+if(GRAPHOS_BUILD_PYTHON AND PROJECT_IS_TOP_LEVEL)
+  add_subdirectory(python)
 endif()
 
 # ---- installation ----------------------------------------------------------

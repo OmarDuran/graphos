@@ -34,7 +34,10 @@ struct SubcomplexResult {
 //
 // Orientations are inherited unchanged, so the result satisfies d∘d = 0
 // whenever the parent does.
-inline SubcomplexResult subcomplex(const Complex& c, const Marker& cells) {
+namespace detail {
+
+template <typename GetCoboundary>
+SubcomplexResult subcomplex_via(const Complex& c, const Marker& cells, GetCoboundary&& get_cob) {
   const int dim = c.dim();
   cells.validate_for(c);
 
@@ -53,7 +56,7 @@ inline SubcomplexResult subcomplex(const Complex& c, const Marker& cells) {
   // cofaces are final when it is processed, and the gather form keeps every
   // write private to one cell (no scatter races).
   for (int k = dim - 1; k >= 0; --k) {
-    const CoboundaryOperator cob = coboundary(c, k);
+    decltype(auto) cob = get_cob(k);
     const Index* offs = cob.offsets.data();
     const Index* cof = cob.indices.data();
     const Index* up = keep[static_cast<std::size_t>(k) + 1].data();
@@ -135,6 +138,27 @@ inline SubcomplexResult subcomplex(const Complex& c, const Marker& cells) {
 
   return SubcomplexResult{Complex(std::move(kept_counts), std::move(strata)), std::move(map),
                           std::move(embedding)};
+}
+
+}  // namespace detail
+
+inline SubcomplexResult subcomplex(const Complex& c, const Marker& cells) {
+  return detail::subcomplex_via(c, cells, [&](int k) { return coboundary(c, k); });
+}
+
+// As above, reusing PRECOMPUTED coboundary operators (cob[k] = δ_k for
+// k = 0..dim-1). Extracting many subcomplexes from one parent — fracture
+// networks, stratifications, per-region restrictions — computes δ once
+// instead of once per extraction; the closure gather dominates otherwise.
+inline SubcomplexResult subcomplex(const Complex& c, const Marker& cells,
+                                   const std::vector<CoboundaryOperator>& cob) {
+  if (static_cast<int>(cob.size()) < c.dim()) {
+    throw std::invalid_argument("subcomplex: need coboundary operators for k = 0..dim-1");
+  }
+  return detail::subcomplex_via(c, cells,
+                                [&](int k) -> const CoboundaryOperator& {
+                                  return cob[static_cast<std::size_t>(k)];
+                                });
 }
 
 }  // namespace graphos

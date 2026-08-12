@@ -71,3 +71,8 @@ Testing/
 # spack environment artifacts (spack.yaml is tracked; these are generated)
 .spack-env/
 spack.lock
+
+# python binding artifacts
+python/graphos/_core*.so
+python/graphos/__pycache__/
+python/tests/__pycache__/

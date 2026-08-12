@@ -1,15 +1,14 @@
 #pragma once
 
-#include <algorithm>
 #include <map>
-#include <numeric>
 #include <stdexcept>
 #include <utility>
 #include <vector>
 
-#include "graphos/core/coboundary.hpp"
 #include "graphos/core/complex.hpp"
+#include "graphos/core/incidence.hpp"
 #include "graphos/core/marker.hpp"
+#include "graphos/core/union_find.hpp"
 
 namespace graphos {
 
@@ -24,31 +23,12 @@ struct CutResult {
 
 namespace detail {
 
-struct UnionFind {
-  std::vector<int> parent;
-  explicit UnionFind(int n) : parent(static_cast<std::size_t>(n)) {
-    std::iota(parent.begin(), parent.end(), 0);
-  }
-  int find(int a) {
-    while (parent[static_cast<std::size_t>(a)] != a) {
-      parent[static_cast<std::size_t>(a)] = parent[static_cast<std::size_t>(parent[static_cast<std::size_t>(a)])];
-      a = parent[static_cast<std::size_t>(a)];
-    }
-    return a;
-  }
-  void unite(int a, int b) {
-    a = find(a);
-    b = find(b);
-    if (a != b) parent[static_cast<std::size_t>(b)] = a;
-  }
-};
-
-// Bookkeeping for one cell that splits: which side (component of its cut
-// star) each top-dimensional coface belongs to, one representative top cell
-// per side, and the result index of each side's copy.
+// Bookkeeping for one cell that splits: which side each cell of its cut
+// star belongs to, one representative star cell per side, and the result
+// index of each side's copy.
 struct SplitInfo {
-  std::map<Index, int> side_of_top;
-  std::vector<Index> rep_top;
+  std::map<std::pair<int, Index>, int> side_of;
+  std::vector<std::pair<int, Index>> rep;
   std::vector<Index> copy_index;
 };
 
@@ -60,28 +40,25 @@ struct SplitInfo {
 //
 // Collective. The interface is selected by a Marker over (n-1)-cells, marked
 // locally on each rank (e.g. via mark_where); the cut is the union of all
-// ranks' marks. Side classification is local to each closure cell's star
-// (within halo depth 1); ranks sharing a split cell agree on copy identity
-// by a deterministic rule, so results are rank-count independent. P=1
-// today: the local partition is everything.
+// ranks' marks. P=1 today.
 //
-// For every cell x in the closure of the interface, the sides of the cut at x
-// are the connected components of x's top-cell star, where two n-cells are
-// adjacent iff they share an (n-1)-cell that contains x and is NOT in the
-// interface. Each side gets its own copy of x, and the bulk rewires to the
-// copies; the ORIGINALS survive untouched as a detached lower-dimensional
-// subcomplex — the interface (fracture) domain, closure included. Cells with
-// a single side (the tip/rim of the interface) are not copied, which yields
-// the crack-front topology automatically; junction cells with three or more
+// For every cell x in the closure of the interface, the SIDES of the cut at
+// x are the incidence-connected components of st(x) ∖ cl(S) — its strict
+// cofaces outside the interface closure, two connected when one is a face
+// of the other. (Connectivity through cells of ANY dimension: this is what
+// makes the op sound on general — nonmanifold, mixed-dimensional —
+// complexes, where facet-only adjacency undercounts.) Each side gets its
+// own copy of x; every cell outside the closure lies in exactly one side of
+// each split cell it references, and rewires to that side's copy. The
+// ORIGINALS survive untouched as a detached lower-dimensional subcomplex —
+// the interface (fracture) domain, closure included. Cells with a single
+// side (the tip/rim of the interface) are not copied, which yields the
+// crack-front topology automatically; junction cells with three or more
 // sides get one copy each, which no two-sided geometric test can express.
 //
 // No cell is removed and original indices are stable: copies are appended
 // after the originals of each stratum, ordered by (ancestor index, side).
-//
-// Side classification is topological, so the op needs no geometric input.
-// Cells whose cofaces do not reach the top dimension (maximal lower-dim
-// cells hanging on a split cell) keep their original references and thus
-// stay attached to the interface domain.
+// Side classification is topological — the op needs no geometric input.
 inline CutResult cut_along(const Complex& c, const Marker& interface) {
   const int n = c.dim();
   if (n < 1) throw std::invalid_argument("cut_along: complex must have dimension >= 1");
@@ -100,7 +77,8 @@ inline CutResult cut_along(const Complex& c, const Marker& interface) {
   {
     const std::vector<char>& f = interface.flags(n - 1);
     for (Index x = 0; x < c.count(n - 1); ++x) {
-      in_closure[static_cast<std::size_t>(n) - 1][static_cast<std::size_t>(x)] = f[static_cast<std::size_t>(x)];
+      in_closure[static_cast<std::size_t>(n) - 1][static_cast<std::size_t>(x)] =
+          f[static_cast<std::size_t>(x)];
     }
   }
   for (int k = n - 1; k >= 1; --k) {
@@ -112,64 +90,81 @@ inline CutResult cut_along(const Complex& c, const Marker& interface) {
       }
     }
   }
-  const std::vector<char>& in_interface = in_closure[static_cast<std::size_t>(n) - 1];
 
-  std::vector<CoboundaryOperator> cob(static_cast<std::size_t>(n));
-  for (int k = 0; k < n; ++k) cob[static_cast<std::size_t>(k)] = coboundary(c, k);
-
-  // cofaces of x at the target dimension, by breadth-first ascent
-  const auto up = [&](int k, Index x, int target) {
-    std::vector<Index> cur{x};
-    for (int level = k; level < target; ++level) {
-      const CoboundaryOperator& a = cob[static_cast<std::size_t>(level)];
-      std::vector<Index> nxt;
-      for (const Index e : cur) {
-        for (Index m = a.offsets[static_cast<std::size_t>(e)];
-             m < a.offsets[static_cast<std::size_t>(e) + 1]; ++m) {
-          nxt.push_back(a.indices[static_cast<std::size_t>(m)]);
-        }
-      }
-      std::sort(nxt.begin(), nxt.end());
-      nxt.erase(std::unique(nxt.begin(), nxt.end()), nxt.end());
-      cur = std::move(nxt);
+  // coface tables for star traversal
+  std::vector<std::vector<Adjacency>> inc(static_cast<std::size_t>(n) + 1);
+  for (int k = 0; k < n; ++k) {
+    inc[static_cast<std::size_t>(k)].resize(static_cast<std::size_t>(n) + 1);
+    for (int j = k + 1; j <= n; ++j) {
+      inc[static_cast<std::size_t>(k)][static_cast<std::size_t>(j)] = incidence(c, k, j);
     }
-    return cur;
-  };
+  }
 
   // side classification for every closure cell
   std::vector<std::map<Index, detail::SplitInfo>> split(static_cast<std::size_t>(n) + 1);
-  for (int k = n - 1; k >= 0; --k) {
+  std::vector<std::pair<int, Index>> nodes;
+  for (int k = 0; k < n; ++k) {
     const std::size_t sk = static_cast<std::size_t>(k);
     for (Index x = 0; x < c.count(k); ++x) {
       if (!in_closure[sk][static_cast<std::size_t>(x)]) continue;
-      const std::vector<Index> tops = up(k, x, n);
-      if (tops.empty()) continue;
-      const std::vector<Index> facets = (k == n - 1) ? std::vector<Index>{x} : up(k, x, n - 1);
 
-      std::map<Index, int> slot;
-      for (std::size_t t = 0; t < tops.size(); ++t) slot[tops[t]] = static_cast<int>(t);
-      detail::UnionFind uf(static_cast<int>(tops.size()));
-      for (const Index f : facets) {
-        if (in_interface[static_cast<std::size_t>(f)]) continue;
-        const CoboundaryOperator& a = cob[static_cast<std::size_t>(n) - 1];
-        const Index lo = a.offsets[static_cast<std::size_t>(f)];
-        const Index hi = a.offsets[static_cast<std::size_t>(f) + 1];
-        for (Index m = lo + 1; m < hi; ++m) {
-          uf.unite(slot[a.indices[static_cast<std::size_t>(lo)]],
-                   slot[a.indices[static_cast<std::size_t>(m)]]);
+      // the cut star: strict cofaces of x outside the interface closure
+      nodes.clear();
+      for (int j = k + 1; j <= n; ++j) {
+        const Adjacency& a = inc[sk][static_cast<std::size_t>(j)];
+        for (Index m = a.offsets[static_cast<std::size_t>(x)];
+             m < a.offsets[static_cast<std::size_t>(x) + 1]; ++m) {
+          const Index y = a.indices[static_cast<std::size_t>(m)];
+          if (!in_closure[static_cast<std::size_t>(j)][static_cast<std::size_t>(y)]) {
+            nodes.emplace_back(j, y);
+          }
+        }
+      }
+      if (nodes.empty()) continue;
+
+      std::map<std::pair<int, Index>, int> slot;
+      for (std::size_t t = 0; t < nodes.size(); ++t) slot[nodes[t]] = static_cast<int>(t);
+      UnionFind uf(static_cast<Index>(nodes.size()));
+      // two star cells are connected when one bounds the other — full poset
+      // COMPARABILITY, not just direct-face links: open-cell interiors touch
+      // whenever z < y, even if every intermediate cell lies in the
+      // interface closure
+      for (std::size_t t = 0; t < nodes.size(); ++t) {
+        const auto [jz, z] = nodes[t];
+        for (int j2 = jz + 1; j2 <= n; ++j2) {
+          const Adjacency& a2 = inc[static_cast<std::size_t>(jz)][static_cast<std::size_t>(j2)];
+          for (Index m = a2.offsets[static_cast<std::size_t>(z)];
+               m < a2.offsets[static_cast<std::size_t>(z) + 1]; ++m) {
+            const auto it = slot.find({j2, a2.indices[static_cast<std::size_t>(m)]});
+            if (it != slot.end()) {
+              uf.unite(static_cast<Index>(t), static_cast<Index>(it->second));
+            }
+          }
         }
       }
 
       detail::SplitInfo info;
-      std::map<int, int> root_to_side;
-      for (std::size_t t = 0; t < tops.size(); ++t) {
-        const int root = uf.find(static_cast<int>(t));
-        auto [it, fresh] = root_to_side.try_emplace(root, static_cast<int>(info.rep_top.size()));
-        if (fresh) info.rep_top.push_back(tops[t]);
-        info.side_of_top[tops[t]] = it->second;
+      std::map<Index, int> root_to_side;
+      for (std::size_t t = 0; t < nodes.size(); ++t) {
+        const Index root = uf.find(static_cast<Index>(t));
+        auto [it, fresh] = root_to_side.try_emplace(root, static_cast<int>(info.rep.size()));
+        if (fresh) info.rep.push_back(nodes[t]);
+        info.side_of[nodes[t]] = it->second;
       }
-      const bool is_interface_cell = (k == n - 1);
-      if (is_interface_cell || info.rep_top.size() >= 2) {
+      // duplicate when: the cell is the interface itself, it has several
+      // sides, or ANY of its faces was duplicated (processing ascends in k,
+      // so lower strata are final). The last clause is what keeps a
+      // one-sided rim cell consistent when its own vertex splits: the bulk
+      // rewires to its copy while the interface keeps the original. True
+      // crack-front cells — one side, no split faces — stay shared.
+      bool needs_copy = (k == n - 1) || info.rep.size() >= 2;
+      if (!needs_copy && k >= 1) {
+        const BoundaryOperator& bx = c.boundary(k);
+        for (Index m = bx.offsets[x]; m < bx.offsets[x + 1] && !needs_copy; ++m) {
+          needs_copy = split[sk - 1].count(bx.indices[m]) != 0;
+        }
+      }
+      if (needs_copy) {
         split[sk].emplace(x, std::move(info));
       }
     }
@@ -181,21 +176,21 @@ inline CutResult cut_along(const Complex& c, const Marker& interface) {
     const std::size_t sk = static_cast<std::size_t>(k);
     for (auto& [x, info] : split[sk]) {
       (void)x;
-      for (std::size_t s = 0; s < info.rep_top.size(); ++s) {
+      for (std::size_t s = 0; s < info.rep.size(); ++s) {
         info.copy_index.push_back(new_counts[sk]++);
       }
     }
   }
 
-  // a boundary reference to a split cell resolves to the copy for the side
-  // that the referencing cell's top-dimensional ancestry lies on
-  const auto resolve = [&](int face_dim, Index face, Index top_rep) -> Index {
+  // a reference to a split cell resolves to the copy for the side that the
+  // referencing cell lies on (it is in the split cell's cut star by
+  // construction)
+  const auto resolve = [&split](int face_dim, Index face, int ref_dim, Index ref) -> Index {
     const auto it = split[static_cast<std::size_t>(face_dim)].find(face);
     if (it == split[static_cast<std::size_t>(face_dim)].end()) return face;
-    const detail::SplitInfo& info = it->second;
-    const auto side = info.side_of_top.find(top_rep);
-    if (side == info.side_of_top.end()) return face;
-    return info.copy_index[static_cast<std::size_t>(side->second)];
+    const auto side = it->second.side_of.find({ref_dim, ref});
+    if (side == it->second.side_of.end()) return face;
+    return it->second.copy_index[static_cast<std::size_t>(side->second)];
   };
 
   std::vector<BoundaryOperator> strata(static_cast<std::size_t>(n) + 1);
@@ -207,21 +202,15 @@ inline CutResult cut_along(const Complex& c, const Marker& interface) {
     BoundaryOperator& out = strata[sk];
 
     // originals: closure cells keep their rows (they ARE the interface
-    // domain); bulk cells rewire references to split faces
+    // domain); everything else rewires references to split faces through
+    // its own side
     for (Index e = 0; e < c.count(k); ++e) {
       row_idx.clear();
       row_sg.clear();
-      Index top_rep = invalid_index;
       const bool is_closure = in_closure[sk][static_cast<std::size_t>(e)];
       for (Index m = bnd.offsets[e]; m < bnd.offsets[e + 1]; ++m) {
         Index f = bnd.indices[m];
-        if (!is_closure && split[sk - 1].count(f) != 0) {
-          if (top_rep == invalid_index) {
-            const std::vector<Index> tops = (k == n) ? std::vector<Index>{e} : up(k, e, n);
-            top_rep = tops.empty() ? invalid_index : tops.front();
-          }
-          if (top_rep != invalid_index) f = resolve(k - 1, f, top_rep);
-        }
+        if (!is_closure) f = resolve(k - 1, f, k, e);
         row_idx.push_back(f);
         row_sg.push_back(bnd.signs[m]);
       }
@@ -229,14 +218,15 @@ inline CutResult cut_along(const Complex& c, const Marker& interface) {
     }
 
     // copies: one row per side, faces resolved through that side's
-    // representative top cell (side components refine downward, so the
+    // representative star cell (side components refine downward, so the
     // representative determines the face's copy consistently)
     for (const auto& [x, info] : split[sk]) {
-      for (std::size_t s = 0; s < info.rep_top.size(); ++s) {
+      for (std::size_t s = 0; s < info.rep.size(); ++s) {
+        const auto [rd, ri] = info.rep[s];
         row_idx.clear();
         row_sg.clear();
         for (Index m = bnd.offsets[x]; m < bnd.offsets[x + 1]; ++m) {
-          row_idx.push_back(resolve(k - 1, bnd.indices[m], info.rep_top[s]));
+          row_idx.push_back(resolve(k - 1, bnd.indices[m], rd, ri));
           row_sg.push_back(bnd.signs[m]);
         }
         out.append_row(row_idx, row_sg);

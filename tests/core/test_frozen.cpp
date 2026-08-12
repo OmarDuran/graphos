@@ -89,6 +89,38 @@ GRAPHOS_TEST(link_of_a_boundary_vertex_is_an_interval) {
   CHECK(lk[2].empty());
 }
 
+GRAPHOS_TEST(dual_view_reverses_the_poset) {
+  const graphos::FrozenComplex f = graphos::freeze(graphos_test::make_triangle());
+  const graphos::DualView d = graphos::dual(f);
+  CHECK(d.dim() == 2);
+  CHECK(d.count(0) == 1);  // the face
+  CHECK(d.count(1) == 3);  // the edges
+  CHECK(d.count(2) == 3);  // the vertices
+
+  // ∂^dual of a dual 1-cell (a primal edge) reaches the dual 0-cell of its
+  // primal coface
+  const auto r = d.boundary_row(1, 0);
+  CHECK(r.size == 1);
+  CHECK(r.indices[0] == 0);
+  // ∂^dual of a dual 2-cell (a primal vertex) reaches its two primal edges
+  CHECK(d.boundary_row(2, 0).size == 2);
+  // δ^dual of the dual 0-cell is the primal face boundary
+  CHECK(d.coboundary_row(0, 0).size == 3);
+}
+
+GRAPHOS_TEST(dual_of_dual_rows_match_primal) {
+  const graphos::FrozenComplex f = graphos::freeze(graphos_test::make_two_triangle_disk());
+  const graphos::DualView d = graphos::dual(f);
+  // dual boundary of a dual 1-cell = primal coboundary of the mirrored edge
+  const auto dr = d.boundary_row(1, 0);
+  const auto pr = f.coboundary_row(1, 0);
+  CHECK(dr.size == pr.size);
+  for (graphos::Index m = 0; m < dr.size; ++m) {
+    CHECK(dr.indices[m] == pr.indices[m]);
+    CHECK(dr.signs[m] == pr.signs[m]);
+  }
+}
+
 GRAPHOS_TEST(halo_depth_is_recorded_and_validated) {
   const graphos::Complex c = graphos_test::make_triangle();
   CHECK(graphos::freeze(c).halo_depth() == 1);

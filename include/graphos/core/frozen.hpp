@@ -69,6 +69,13 @@ class FrozenComplex {
     }
   }
 
+  // frozen storage is move-only (exec::Array owns device-capable memory);
+  // stating it explicitly keeps type traits honest for bindings
+  FrozenComplex(const FrozenComplex&) = delete;
+  FrozenComplex& operator=(const FrozenComplex&) = delete;
+  FrozenComplex(FrozenComplex&&) = default;
+  FrozenComplex& operator=(FrozenComplex&&) = default;
+
   int dim() const { return dim_; }
 
   int halo_depth() const { return halo_depth_; }
@@ -204,5 +211,45 @@ class FrozenComplex {
 inline FrozenComplex freeze(const Complex& c, int halo_depth = 1) {
   return FrozenComplex(c, halo_depth);
 }
+
+// The combinatorial dual: the face poset with its order reversed. The dual
+// k-cell IS the primal (n−k)-cell — same index — and the dual boundary
+// operator is the primal coboundary of the mirrored dimension, so the view
+// is zero-copy over the frozen storage. This is the combinatorial half of
+// the DEC dual mesh: exokalk realizes dual cells geometrically (via the
+// barycentric subdivision) and puts measures on them; the discrete Hodge
+// star maps primal k-cochains to cochains on dual (n−k)-cells.
+//
+// Signs are the raw transpose coefficients; DEC sign conventions that
+// insert (−1)^{k(n−k)}-type factors are the metric layer's decision, not
+// stored here. Near ∂Ω the dual of a boundary cell is combinatorially
+// truncated (its "missing" boundary faces are the standard DEC boundary
+// treatment, again a metric-layer concern).
+//
+// Local (a view; no communication implied).
+class DualView {
+ public:
+  explicit DualView(const FrozenComplex& f) : f_(&f) {}
+
+  int dim() const { return f_->dim(); }
+
+  Index count(int k) const { return f_->count(f_->dim() - k); }
+
+  // ∂^dual_k = δ_{n−k}: faces of a dual k-cell are the dual (k−1)-cells of
+  // the primal cofaces of its primal (n−k)-cell
+  FrozenComplex::Row boundary_row(int k, Index cell) const {
+    return f_->coboundary_row(f_->dim() - k, cell);
+  }
+
+  // δ^dual_k = ∂_{n−k}
+  FrozenComplex::Row coboundary_row(int k, Index cell) const {
+    return f_->boundary_row(f_->dim() - k, cell);
+  }
+
+ private:
+  const FrozenComplex* f_;
+};
+
+inline DualView dual(const FrozenComplex& f) { return DualView(f); }
 
 }  // namespace graphos

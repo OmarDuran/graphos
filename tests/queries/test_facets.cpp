@@ -1,4 +1,4 @@
-#include "graphos/ops/boundary.hpp"
+#include "graphos/queries/facets.hpp"
 
 #include "graphos/ops/cut.hpp"
 #include "graphos/ops/subcomplex.hpp"
@@ -14,21 +14,21 @@ GRAPHOS_TEST(disk_facets_split_into_boundary_and_interior) {
   CHECK(cls.interior.marked(1, 0));  // the shared edge
   CHECK(cls.interior.marked_count(1) == 1);
   CHECK(cls.boundary.marked_count(1) == 4);
-  CHECK(cls.free.marked_count(1) == 0);
+  CHECK(cls.maximal.marked_count(1) == 0);
   CHECK(cls.nonmanifold.marked_count(1) == 0);
 }
 
 // After a through-cut, the detached interface original has no cofaces
-// (free), and every remaining bulk edge sees exactly one triangle.
-GRAPHOS_TEST(cut_turns_interface_free_and_copies_into_boundary) {
+// (a maximal (n-1)-cell), and every remaining bulk edge sees exactly one triangle.
+GRAPHOS_TEST(cut_turns_interface_maximal_and_copies_into_boundary) {
   const graphos::Complex c = graphos_test::make_two_triangle_disk();
   graphos::Marker interface(c);
   interface.mark(1, 0);
   const auto cut = graphos::cut_along(c, interface);
 
   const auto cls = graphos::classify_facets(cut.complex);
-  CHECK(cls.free.marked(1, 0));  // the fracture domain cell
-  CHECK(cls.free.marked_count(1) == 1);
+  CHECK(cls.maximal.marked(1, 0));  // the fracture domain cell
+  CHECK(cls.maximal.marked_count(1) == 1);
   CHECK(cls.boundary.marked_count(1) == 6);  // both triangles fully exposed
   CHECK(cls.interior.marked_count(1) == 0);
 }
@@ -68,6 +68,21 @@ GRAPHOS_TEST(boundary_complex_of_a_disk_is_a_circle) {
   CHECK(sub.complex.count(2) == 0);
   CHECK(graphos::d_squared_is_zero(sub.complex));
   CHECK(graphos::euler_characteristic(sub.complex) == 0);  // a circle
+}
+
+GRAPHOS_TEST(closedness_and_boundary_of_boundary) {
+  const graphos::Complex disk = graphos_test::make_two_triangle_disk();
+  CHECK(!graphos::is_closed(disk));
+  // the boundary subcomplex is itself closed: ∂(∂K) = ∅
+  const auto bd = graphos::subcomplex(disk, graphos::classify_facets(disk).boundary);
+  CHECK(graphos::is_closed(bd.complex));
+
+  graphos::Complex circle(1);
+  circle.attach_vertices(3);
+  circle.attach_cell(1, {0, 1}, {-1, +1});
+  circle.attach_cell(1, {1, 2}, {-1, +1});
+  circle.attach_cell(1, {2, 0}, {-1, +1});
+  CHECK(graphos::is_closed(circle));
 }
 
 GRAPHOS_TEST(rejects_zero_dimensional_complex) {
