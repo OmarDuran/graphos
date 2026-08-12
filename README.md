@@ -23,7 +23,9 @@ graphos speaks computational topology:
 | **pushout A ⊔_C B** | `pushout(a, b, vertex_identifications)` — union glued along the shared subcomplex; the combinatorial core of BRep/domain union and mesh conformity |
 | **star deletion** | `star_deletion(c, cells)` — remove cells and their closed stars (upward cascade); the combinatorial core of domain difference |
 | **cutting along a subcomplex** | `cut_along(c, interface_cells)` — split the complex along an interface: sides are connected components of each closure cell's cut star, each side gets a copy, originals survive as the detached interface (fracture) domain. Tips/rims (one side) are not copied; junctions (3+ sides) get one copy per side. Purely topological — no geometric side test needed |
-| **coboundary** | `coboundary(c, k)` — unsigned upward adjacency (sparsity transpose of ∂_{k+1}) |
+| **coboundary δ_k** | `coboundary(c, k)` — the signed transpose of ∂_{k+1}; applying it to a k-cochain is the discrete differential |
+| **frozen complex** | `freeze(c)` → `FrozenComplex` — the immutable query object: ∂ and δ in device-capable storage (`exec::Array`, the CHAI seam), host row access, kernel views |
+| **star / closure / link** | `FrozenComplex::star/closure/link(k, cell)` — st(σ), cl(σ), lk(σ) = cl(st(σ)) \ st(cl(σ)); the queries NetworkX views will sit on |
 
 Decisions that require geometry ("these two vertices are the same point")
 enter as explicit `Identification` inputs; everything downstream is
@@ -47,9 +49,12 @@ combinatorial.
   2. `exec::Buffer<T>` ([exec/memory.hpp](include/graphos/exec/memory.hpp)) —
      kernel scratch drawn from Umpire pools (`GRAPHOS_ENABLE_UMPIRE`), plain
      heap otherwise.
-  3. Persistent complex storage as CHAI-managed arrays — planned; lands with
-     the frozen/builder split, since CHAI's copy-on-context semantics
-     presuppose frozen storage. Device execution policies follow from it.
+  3. `exec::Array<T>` ([exec/array.hpp](include/graphos/exec/array.hpp)) —
+     persistent storage for frozen complexes, `chai::ManagedArray`-backed
+     under `GRAPHOS_ENABLE_CHAI` (host fallback otherwise). `Complex` is the
+     mutable builder; `freeze()` produces the immutable `FrozenComplex`
+     whose ∂/δ arrays and `CsrView`s are what device kernels will capture.
+     Device execution policies (CUDA/HIP/SYCL) are the remaining step.
 
 ## Build, test, install
 
@@ -61,8 +66,10 @@ cmake --install build --prefix ~/opt/graphos
 ```
 
 Consume the installed package with `find_package(graphos CONFIG REQUIRED)`
-and link `graphos::graphos` (point `CMAKE_PREFIX_PATH` at the prefix if it
-is not a system location).
+and link `graphos::graphos`. **Full instructions — including the
+RAJA/Umpire/CHAI stack via the bundled Spack environment
+([spack.yaml](spack.yaml)), GPU variants, and troubleshooting — are in
+[INSTALL.md](INSTALL.md).**
 
 Requires CMake ≥ 3.20 and a C++20 compiler; the default build has no other
 dependencies (header-only, `graphos::graphos` CMake target).
@@ -86,10 +93,9 @@ FetchContent; without it they are located with `find_package`.
 
 1. Kernel-form port of `cut_along` (side labeling as parallel label
    propagation) and `quotient`; 3D cut coverage (branching fracture tests).
-2. Derived operators: signed coboundary, multi-level closures, star and link
-   queries, fixed-arity strided storage for single-cell-type complexes.
-3. Frozen/builder split; persistent storage on CHAI/Umpire; device execution
-   policies (CUDA/HIP/SYCL) for the bulk kernels.
+2. Device execution policies (CUDA/HIP/SYCL) for the bulk kernels, on the
+   frozen storage; CHAI-enabled CI build. Fixed-arity strided storage for
+   single-cell-type complexes.
 4. Python bindings (pybind11) with opaque handles; NetworkX 3.x backend
    exposing zero-copy structural views.
 5. Distributed layer: global IDs, METIS/ParMETIS partitions, MPI halo

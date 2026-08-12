@@ -67,3 +67,7 @@ vcpkg_installed/
 # test output & cache
 Testing/
 .cache/
+
+# spack environment artifacts (spack.yaml is tracked; these are generated)
+.spack-env/
+spack.lock

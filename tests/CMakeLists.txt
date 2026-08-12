@@ -4,8 +4,10 @@ set(GRAPHOS_UNIT_TESTS
   core/test_types
   core/test_complex
   core/test_coboundary
+  core/test_frozen
   exec/test_forall
   exec/test_memory
+  exec/test_array
   ops/test_disjoint_union
   ops/test_quotient
   ops/test_pushout

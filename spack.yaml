@@ -1,0 +1,41 @@
+# Spack environment for the graphos hardware-portability stack: RAJA (kernel
+# execution), Umpire (memory pools), CHAI (managed arrays), pinned to the
+# coordinated 2024.07 LLNL release line so the three agree on camp/BLT.
+#
+# Usage (details in INSTALL.md):
+#   spack env activate /path/to/graphos     # this directory
+#   spack install
+#   cmake -S . -B build -DGRAPHOS_ENABLE_RAJA=ON -DGRAPHOS_ENABLE_UMPIRE=ON \
+#         -DGRAPHOS_ENABLE_CHAI=ON -DCMAKE_PREFIX_PATH=$PWD/.spack-env/view
+#
+# GPU builds: add the matching variant to every spec, e.g.
+#   raja@2024.07.0 +cuda cuda_arch=90   (same for umpire and chai)
+# or +rocm amdgpu_target=gfx90a for AMD.
+spack:
+  specs:
+  - raja@2024.07.0
+  - umpire@2024.07.0
+  - chai@2024.07.0
+  concretizer:
+    unify: true
+  view: true
+  packages:
+    gcc:
+      externals:
+      - spec: gcc@15.2.0 languages:='c,c++,fortran'
+        prefix: /opt/homebrew
+        extra_attributes:
+          compilers:
+            c: /opt/homebrew/bin/gcc-15
+            cxx: /opt/homebrew/bin/g++-15
+            fortran: /opt/homebrew/bin/gfortran
+    apple-clang:
+      externals:
+      - spec: apple-clang@21.0.0
+        prefix: /usr
+        extra_attributes:
+          compilers:
+            c: /usr/bin/clang
+            cxx: /usr/bin/clang++
+    all:
+      variants: ~examples ~tests

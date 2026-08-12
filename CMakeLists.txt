@@ -12,6 +12,7 @@ target_compile_features(graphos INTERFACE cxx_std_20)
 # nothing but a C++20 compiler; enabling swaps in the DOE stack.
 option(GRAPHOS_ENABLE_RAJA "Dispatch exec::forall/scan through RAJA policies" OFF)
 option(GRAPHOS_ENABLE_UMPIRE "Allocate exec::Buffer from Umpire memory pools" OFF)
+option(GRAPHOS_ENABLE_CHAI "Store frozen complexes in CHAI managed arrays" OFF)
 option(GRAPHOS_FETCH_TPL "FetchContent third-party libs instead of find_package" OFF)
 
 if(GRAPHOS_ENABLE_RAJA)
@@ -46,6 +47,14 @@ if(GRAPHOS_ENABLE_UMPIRE)
   endif()
   target_link_libraries(graphos INTERFACE umpire)
   target_compile_definitions(graphos INTERFACE GRAPHOS_HAVE_UMPIRE)
+endif()
+
+if(GRAPHOS_ENABLE_CHAI)
+  # CHAI coordinates versions with RAJA/Umpire; use installed packages
+  # (e.g. via spack), not GRAPHOS_FETCH_TPL
+  find_package(chai REQUIRED)
+  target_link_libraries(graphos INTERFACE chai)
+  target_compile_definitions(graphos INTERFACE GRAPHOS_HAVE_CHAI)
 endif()
 
 include(CTest)

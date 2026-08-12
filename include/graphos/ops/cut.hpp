@@ -100,14 +100,14 @@ inline CutResult cut_along(const Complex& c, const std::vector<Index>& interface
   }
   const std::vector<char>& in_interface = in_closure[static_cast<std::size_t>(n) - 1];
 
-  std::vector<Adjacency> cob(static_cast<std::size_t>(n));
+  std::vector<CoboundaryOperator> cob(static_cast<std::size_t>(n));
   for (int k = 0; k < n; ++k) cob[static_cast<std::size_t>(k)] = coboundary(c, k);
 
   // cofaces of x at the target dimension, by breadth-first ascent
   const auto up = [&](int k, Index x, int target) {
     std::vector<Index> cur{x};
     for (int level = k; level < target; ++level) {
-      const Adjacency& a = cob[static_cast<std::size_t>(level)];
+      const CoboundaryOperator& a = cob[static_cast<std::size_t>(level)];
       std::vector<Index> nxt;
       for (const Index e : cur) {
         for (Index m = a.offsets[static_cast<std::size_t>(e)];
@@ -137,7 +137,7 @@ inline CutResult cut_along(const Complex& c, const std::vector<Index>& interface
       detail::UnionFind uf(static_cast<int>(tops.size()));
       for (const Index f : facets) {
         if (in_interface[static_cast<std::size_t>(f)]) continue;
-        const Adjacency& a = cob[static_cast<std::size_t>(n) - 1];
+        const CoboundaryOperator& a = cob[static_cast<std::size_t>(n) - 1];
         const Index lo = a.offsets[static_cast<std::size_t>(f)];
         const Index hi = a.offsets[static_cast<std::size_t>(f) + 1];
         for (Index m = lo + 1; m < hi; ++m) {
