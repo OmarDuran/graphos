@@ -21,11 +21,12 @@ graphos speaks computational topology:
 | **quotient** | `quotient(c, identifications)` — glue cells together, orientation flips propagate through stars |
 | **parallel cells** | `find_parallel_cells(c, k)` — cells with equal boundary chains up to a uniform flip |
 | **pushout A ⊔_C B** | `pushout(a, b, vertex_identifications)` — union glued along the shared subcomplex; the combinatorial core of BRep/domain union and mesh conformity |
-| **star deletion** | `star_deletion(c, cells)` — remove cells and their closed stars (upward cascade); the combinatorial core of domain difference |
-| **cutting along a subcomplex** | `cut_along(c, interface_cells)` — split the complex along an interface: sides are connected components of each closure cell's cut star, each side gets a copy, originals survive as the detached interface (fracture) domain. Tips/rims (one side) are not copied; junctions (3+ sides) get one copy per side. Purely topological — no geometric side test needed |
+| **star deletion** | `star_deletion(c, marker)` — remove marked cells and their closed stars (upward cascade); the combinatorial core of domain difference |
+| **cutting along a subcomplex** | `cut_along(c, interface_marker)` — split the complex along a marked interface: sides are connected components of each closure cell's cut star, each side gets a copy, originals survive as the detached interface (fracture) domain. Tips/rims (one side) are not copied; junctions (3+ sides) get one copy per side. Purely topological — no geometric side test needed |
 | **coboundary δ_k** | `coboundary(c, k)` — the signed transpose of ∂_{k+1}; applying it to a k-cochain is the discrete differential |
 | **frozen complex** | `freeze(c)` → `FrozenComplex` — the immutable query object: ∂ and δ in device-capable storage (`exec::Array`, the CHAI seam), host row access, kernel views |
 | **star / closure / link** | `FrozenComplex::star/closure/link(k, cell)` — st(σ), cl(σ), lk(σ) = cl(st(σ)) \ st(cl(σ)); the queries NetworkX views will sit on |
+| **marker** | `Marker` — locally-evaluated, collectively-meaningful cell selection (`mark`, `mark_where(k, pred)`); the argument form of `cut_along` and `star_deletion` |
 
 Decisions that require geometry ("these two vertices are the same point")
 enter as explicit `Identification` inputs; everything downstream is
@@ -55,6 +56,36 @@ combinatorial.
      mutable builder; `freeze()` produces the immutable `FrozenComplex`
      whose ∂/δ arrays and `CsrView`s are what device kernels will capture.
      Device execution policies (CUDA/HIP/SYCL) are the remaining step.
+
+## Collective semantics (the SPMD contract)
+
+graphos is written so the same program runs unchanged on a laptop and on a
+cluster: every public operation is *specified* as collective, and the
+current serial implementation is the P = 1 special case. Distribution
+(global IDs, ParMETIS partitioning, halo exchange) will land inside
+`freeze()` and the ops as an implementation detail — not as an API change.
+
+Every public operation carries one of three contracts (PETSc vocabulary):
+
+| Contract | Meaning | Operations |
+|---|---|---|
+| **Collective** | All ranks call it, same order; result is globally consistent | `disjoint_union`, `cut_along`, `star_deletion`, `freeze`, `count`, `validate`, `d_squared_is_zero`, `euler_characteristic` |
+| **Logically collective** | All ranks participate; arguments are supplied per-rank for locally owned cells | `quotient`, `pushout` (identifications) |
+| **Local** | Per-rank, no communication; correct within the ghost ring | `star`, `closure`, `link`, row access, views |
+
+Two disciplines follow:
+
+1. **The one law**: a distributed program must call the collective
+   operations in the same order on every rank — never branch a
+   topology-changing call on rank-local data. This is the only way
+   distribution is visible in user code.
+2. **Selection is by marking, not by index lists**: ops take a `Marker`,
+   marked locally (`mark_where(k, predicate)` is the canonical form). A
+   predicate evaluates on each rank over its own cells, so the same program
+   text is meaningful at any rank count.
+
+`freeze(c, halo_depth)` records the ghost-ring depth (default 1) that Local
+queries are guaranteed correct within.
 
 ## Build, test, install
 

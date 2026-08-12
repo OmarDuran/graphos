@@ -27,6 +27,9 @@ struct PushoutResult {
 // deduplicate=false when distinct cells over the same boundary must survive
 // (e.g. two BRep curves spanning the same vertex pair), and quotient
 // explicitly instead.
+//
+// Logically collective: every rank participates, supplying the vertex
+// identifications it owns. P=1 today.
 inline PushoutResult pushout(const Complex& a, const Complex& b,
                              const std::vector<Identification>& vertex_identifications,
                              bool deduplicate = true) {

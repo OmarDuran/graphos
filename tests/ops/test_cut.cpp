@@ -11,7 +11,10 @@
 // and the original interface cells survive as a detached segment.
 GRAPHOS_TEST(through_cut_separates_bulk_and_detaches_interface) {
   const graphos::Complex c = graphos_test::make_two_triangle_disk();
-  const auto cut = graphos::cut_along(c, {0});
+  // predicate-marked interface: the distribution-stable selection form
+  graphos::Marker interface(c);
+  interface.mark_where(1, [](graphos::Index i) { return i == 0; });
+  const auto cut = graphos::cut_along(c, interface);
   cut.complex.validate();
 
   CHECK(cut.complex.count(0) == 8);  // 4 originals + 2 copies each endpoint
@@ -57,7 +60,7 @@ GRAPHOS_TEST(tip_vertex_is_not_duplicated) {
   CHECK(graphos::d_squared_is_zero(c));
   CHECK(graphos::euler_characteristic(c) == 1);
 
-  const auto cut = graphos::cut_along(c, {0});
+  const auto cut = graphos::cut_along(c, graphos::Marker::from_cells(c, {{}, {0}}));
   cut.complex.validate();
   CHECK(cut.complex.count(0) == 7);   // corner 0 splits; center 4 does NOT
   CHECK(cut.complex.count(1) == 10);  // s0 gets two copies
@@ -89,9 +92,13 @@ GRAPHOS_TEST(tip_vertex_is_not_duplicated) {
   CHECK(spoke_refs[0] != 0 && spoke_refs[1] != 0);
 }
 
-GRAPHOS_TEST(rejects_out_of_range_interface_cells) {
+GRAPHOS_TEST(rejects_marks_outside_interface_dimension) {
   const graphos::Complex c = graphos_test::make_triangle();
-  CHECK_THROWS(graphos::cut_along(c, {99}));
+  graphos::Marker m(c);
+  m.mark(0, 1);  // a vertex is not an (n-1)-cell
+  CHECK_THROWS(graphos::cut_along(c, m));
+  const graphos::Complex other = graphos_test::make_fan();
+  CHECK_THROWS(graphos::cut_along(other, graphos::Marker(c)));  // wrong complex
 }
 
 GRAPHOS_TEST_MAIN()

@@ -3,6 +3,7 @@
 #include "graphos/core/coboundary.hpp"
 #include "graphos/core/complex.hpp"
 #include "graphos/core/frozen.hpp"
+#include "graphos/core/marker.hpp"
 #include "graphos/core/types.hpp"
 #include "graphos/exec/array.hpp"
 #include "graphos/exec/forall.hpp"

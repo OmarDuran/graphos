@@ -20,6 +20,10 @@ struct QuotientResult {
 // rewritten through the quotient map (orientation flips propagate into the
 // star of every reversed cell), and surviving cells are compacted.
 //
+// Logically collective: every rank participates, supplying identifications
+// for cells of its own partition; chains spanning ranks resolve through a
+// distributed union-find. P=1 today: all cells are local.
+//
 // Precondition (caller's responsibility, typically via find_parallel_cells
 // or an external geometric decision): identified cells have equal boundary
 // chains up to rel_sign. The identified cell's own boundary row is

@@ -68,7 +68,8 @@ class Complex {
 
   int dim() const { return static_cast<int>(counts_.size()) - 1; }
 
-  // Number of k-cells.
+  // The GLOBAL number of k-cells: a collective value, identical on every
+  // rank (P=1: trivially the local count).
   Index count(int k) const {
     return (k >= 0 && k <= dim()) ? counts_[static_cast<std::size_t>(k)] : Index{0};
   }
@@ -144,6 +145,7 @@ class Complex {
 
 // The fundamental identity of a chain complex: ∂_{k-1} ∘ ∂_k = 0. This is
 // the check that catches every orientation-convention mistake.
+// Collective: the verdict is global and identical on every rank (P=1 today).
 inline bool d_squared_is_zero(const Complex& c) {
   for (int k = 2; k <= c.dim(); ++k) {
     const BoundaryOperator& hi = c.boundary(k);
@@ -166,6 +168,7 @@ inline bool d_squared_is_zero(const Complex& c) {
   return true;
 }
 
+// Collective: the global alternating sum, identical on every rank.
 inline long long euler_characteristic(const Complex& c) {
   long long chi = 0;
   for (int k = 0; k <= c.dim(); ++k) {

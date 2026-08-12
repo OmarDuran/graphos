@@ -38,11 +38,18 @@ struct CsrView {
 // frozen-complexes/bulk-edits model.
 class FrozenComplex {
  public:
-  explicit FrozenComplex(const Complex& c)
+  // Collective. Under distribution, freezing is where partitioning
+  // (ParMETIS), ownership assignment, and halo construction happen;
+  // halo_depth sets the ghost-ring depth that Local queries (star, closure,
+  // link) can answer correctly. P=1 today: the whole complex is the local
+  // partition and halo_depth is recorded but has no effect.
+  explicit FrozenComplex(const Complex& c, int halo_depth = 1)
       : dim_(c.dim()),
+        halo_depth_(halo_depth),
         counts_(c.counts()),
         boundary_(static_cast<std::size_t>(c.dim()) + 1),
         coboundary_(static_cast<std::size_t>(c.dim()) + 1) {
+    if (halo_depth < 1) throw std::invalid_argument("FrozenComplex: halo_depth must be >= 1");
     c.validate();
     for (int k = 1; k <= dim_; ++k) {
       const BoundaryOperator& bnd = c.boundary(k);
@@ -64,6 +71,10 @@ class FrozenComplex {
 
   int dim() const { return dim_; }
 
+  int halo_depth() const { return halo_depth_; }
+
+  // The GLOBAL number of k-cells: a collective value, identical on every
+  // rank (P=1: trivially the local count).
   Index count(int k) const {
     return (k >= 0 && k <= dim_) ? counts_[static_cast<std::size_t>(k)] : Index{0};
   }
@@ -102,6 +113,10 @@ class FrozenComplex {
 
   // --- combinatorial topology queries -------------------------------------
   // Results are per-dimension sorted cell lists, sized dim()+1.
+  //
+  // Local: evaluated on the local partition plus its ghost ring, correct
+  // when the queried neighborhood lies within freeze()'s halo_depth. No
+  // communication is implied; call freely with different arguments per rank.
 
   // cl(σ): σ and all its faces, recursively.
   std::vector<std::vector<Index>> closure(int k, Index cell) const {
@@ -180,11 +195,14 @@ class FrozenComplex {
   }
 
   int dim_;
+  int halo_depth_;
   std::vector<Index> counts_;
   std::vector<FrozenCsr> boundary_;    // [k] valid for k >= 1
   std::vector<FrozenCsr> coboundary_;  // [k] valid for k < dim
 };
 
-inline FrozenComplex freeze(const Complex& c) { return FrozenComplex(c); }
+inline FrozenComplex freeze(const Complex& c, int halo_depth = 1) {
+  return FrozenComplex(c, halo_depth);
+}
 
 }  // namespace graphos

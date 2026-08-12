@@ -9,9 +9,9 @@
 // private edges and its 2-cell, leaving a single triangle.
 GRAPHOS_TEST(apex_star_deletion_leaves_one_triangle) {
   const graphos::Complex c = graphos_test::make_two_triangle_disk();
-  std::vector<std::vector<graphos::Index>> cells(3);
-  cells[0].push_back(3);  // B's apex
-  const auto sd = graphos::star_deletion(c, cells);
+  graphos::Marker apex(c);
+  apex.mark(0, 3);  // B's apex
+  const auto sd = graphos::star_deletion(c, apex);
   sd.complex.validate();
 
   CHECK(sd.complex.count(0) == 3);
@@ -40,9 +40,9 @@ GRAPHOS_TEST(chain_maps_compose_across_pushout_and_deletion) {
   const std::vector<graphos::Identification> vertex_ids = {{0, 1, +1}, {1, 0, +1}};
   const auto po = graphos::pushout(a, b, vertex_ids, /*deduplicate=*/true);
 
-  std::vector<std::vector<graphos::Index>> cells(3);
-  cells[0].push_back(po.b_map.index[0][2]);  // B's apex in the pushout
-  const auto sd = graphos::star_deletion(po.complex, cells);
+  graphos::Marker apex(po.complex);
+  apex.mark(0, po.b_map.index[0][2]);  // B's apex in the pushout
+  const auto sd = graphos::star_deletion(po.complex, apex);
   sd.complex.validate();
   CHECK(graphos::d_squared_is_zero(sd.complex));
 
@@ -66,9 +66,7 @@ GRAPHOS_TEST(chain_maps_compose_across_pushout_and_deletion) {
 GRAPHOS_TEST(deleting_a_maximal_lower_cell_keeps_its_faces) {
   // mixed-dimensional: a bare segment; deleting the edge keeps its vertices
   const graphos::Complex c = graphos_test::make_segment();
-  std::vector<std::vector<graphos::Index>> cells(2);
-  cells[1].push_back(0);
-  const auto sd = graphos::star_deletion(c, cells);
+  const auto sd = graphos::star_deletion(c, graphos::Marker::from_cells(c, {{}, {0}}));
   CHECK(sd.complex.count(0) == 2);  // orphan pruning is a caller decision
   CHECK(sd.complex.count(1) == 0);
 }

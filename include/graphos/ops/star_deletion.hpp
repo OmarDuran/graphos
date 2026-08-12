@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "graphos/core/complex.hpp"
+#include "graphos/core/marker.hpp"
 #include "graphos/exec/forall.hpp"
 #include "graphos/exec/memory.hpp"
 
@@ -15,11 +16,16 @@ struct StarDeletionResult {
   ChainMap map;
 };
 
-// Deletes the closed stars of the given cells: each listed cell is removed
+// Deletes the closed stars of the marked cells: each marked cell is removed
 // together with every cell it is a face of, cascading up through the
 // skeleta. The result is the largest subcomplex of c containing none of the
-// listed cells. Survivors are compacted; the chain map records each cell's
+// marked cells. Survivors are compacted; the chain map records each cell's
 // fate (invalid_index for cells sent to zero).
+//
+// Collective. Every rank calls this with a Marker marked over its local
+// partition; the deletion is the union of all ranks' marks, and the cascade
+// propagates across partition boundaries (a fixed number of halo exchanges,
+// bounded by the dimension). P=1 today: the local partition is everything.
 //
 // Faces left without any coface are kept: in a mixed-dimensional complex a
 // bare vertex or edge is a legitimate maximal cell, and graphos cannot
@@ -28,25 +34,18 @@ struct StarDeletionResult {
 // This op is the exemplar of the kernel form all bulk ops converge to:
 // mark -> cascade -> scan -> scatter phases through the exec seams, every
 // phase data-parallel over one stratum.
-inline StarDeletionResult star_deletion(const Complex& c,
-                                        const std::vector<std::vector<Index>>& cells) {
+inline StarDeletionResult star_deletion(const Complex& c, const Marker& cells) {
   const int dim = c.dim();
+  cells.validate_for(c);
 
-  // mark: deleted[k][i] = 1 for the listed cells (input marshalling, host)
+  // mark: deleted[k][i] = 1 where the marker selects
   std::vector<exec::Buffer<Index>> deleted;
   deleted.reserve(static_cast<std::size_t>(dim) + 1);
   for (int k = 0; k <= dim; ++k) {
     deleted.emplace_back(static_cast<std::size_t>(c.count(k)));
     Index* g = deleted[static_cast<std::size_t>(k)].data();
-    exec::forall(c.count(k), [=](Index i) { g[i] = 0; });
-  }
-  for (std::size_t k = 0; k < cells.size() && k <= static_cast<std::size_t>(dim); ++k) {
-    for (const Index i : cells[k]) {
-      if (i < 0 || i >= c.count(static_cast<int>(k))) {
-        throw std::out_of_range("star_deletion: cell index out of range");
-      }
-      deleted[k][static_cast<std::size_t>(i)] = 1;
-    }
+    const char* mf = cells.flags(k).data();
+    exec::forall(c.count(k), [=](Index i) { g[i] = mf[i] ? 1 : 0; });
   }
 
   // cascade: one parallel pass per stratum suffices because ∂ reaches

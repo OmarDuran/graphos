@@ -5,6 +5,7 @@ set(GRAPHOS_UNIT_TESTS
   core/test_complex
   core/test_coboundary
   core/test_frozen
+  core/test_marker
   exec/test_forall
   exec/test_memory
   exec/test_array

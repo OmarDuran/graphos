@@ -16,6 +16,9 @@ struct DisjointUnionResult {
 // The coproduct A ⊔ B: strata are concatenated with B's indices shifted.
 // Complexes of different dimension are allowed (mixed-dimensional geometry);
 // the result has the larger dimension.
+//
+// Collective: every rank calls with its local partitions of A and B; the
+// result is the distributed coproduct. P=1 today.
 inline DisjointUnionResult disjoint_union(const Complex& a, const Complex& b) {
   const int dim = std::max(a.dim(), b.dim());
   Complex out(dim);
