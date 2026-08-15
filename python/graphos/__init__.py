@@ -1,4 +1,4 @@
-"""graphos: a metric-free computational topology engine.
+"""graphos: a metric-free engine for finite cell complexes.
 
 Cells stratified by dimension, signed boundary operators, chain maps, and
 an operation calculus (coproduct, product, join, quotient, pushout,

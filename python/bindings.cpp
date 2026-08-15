@@ -65,7 +65,7 @@ void check_dim(std::size_t k, std::size_t n, const char* what) {
 }  // namespace
 
 PYBIND11_MODULE(_core, m) {
-  m.doc() = "graphos: a metric-free computational topology engine";
+  m.doc() = "graphos: a metric-free engine for finite cell complexes: stratified signed incidence, the boundary and coboundary operators, and an operation calculus that returns the induced chain maps";
   m.attr("INVALID_INDEX") = invalid_index;
 
   // ---- the complex and its operators -----------------------------------

@@ -5,7 +5,7 @@ build-backend = "scikit_build_core.build"
 [project]
 name = "graphos"
 version = "0.1.0"
-description = "A metric-free computational topology engine"
+description = "A metric-free engine for finite cell complexes: stratified signed incidence, the boundary and coboundary operators, and an operation calculus that returns the induced chain maps"
 requires-python = ">=3.10"
 dependencies = ["numpy"]
 

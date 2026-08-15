@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
-project(graphos VERSION 0.1.0 LANGUAGES CXX)
+project(graphos VERSION 0.1.0 LANGUAGES CXX
+        DESCRIPTION "A metric-free engine for finite cell complexes: stratified signed incidence, the boundary and coboundary operators, and an operation calculus that returns the induced chain maps")
 
 add_library(graphos INTERFACE)
 add_library(graphos::graphos ALIAS graphos)
