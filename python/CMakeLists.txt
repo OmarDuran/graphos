@@ -1,7 +1,10 @@
 include(FetchContent)
+# PINNED. `stable` is a moving tag: it advanced to pybind11 3.x, whose
+# stricter overload deduction broke this file with no change on our side.
+# A fetched dependency that can move is a build that can break without a commit.
 FetchContent_Declare(pybind11
   GIT_REPOSITORY https://github.com/pybind/pybind11.git
-  GIT_TAG stable)
+  GIT_TAG v2.13.6)
 FetchContent_MakeAvailable(pybind11)
 
 pybind11_add_module(_core bindings.cpp)

@@ -137,7 +137,11 @@ PYBIND11_MODULE(_core, m) {
   // ---- constructors -----------------------------------------------------
   m.def("from_edges", &from_edges, py::arg("n_vertices"), py::arg("segments"));
   m.def("from_polygons", &from_polygons, py::arg("n_vertices"), py::arg("polygons"));
-  m.def("from_polyhedra", &from_polyhedra, py::arg("n_vertices"), py::arg("cells"));
+  // overloaded (flat-CSR and nested forms): the cast names the one bound
+  m.def("from_polyhedra",
+        static_cast<Complex (*)(Index, const std::vector<std::vector<std::vector<Index>>>&)>(
+            &from_polyhedra),
+        py::arg("n_vertices"), py::arg("cells"));
   m.def("from_simplices", &from_simplices, py::arg("dim"), py::arg("n_vertices"), py::arg("cells"));
 
   // ---- derived operators ------------------------------------------------
@@ -317,7 +321,10 @@ PYBIND11_MODULE(_core, m) {
       .def_readonly("complex", &SubcomplexResult::complex)
       .def_readonly("map", &SubcomplexResult::map)
       .def_readonly("embedding", &SubcomplexResult::embedding);
-  m.def("subcomplex", &subcomplex, py::arg("complex"), py::arg("cells"));
+  // overloaded (with and without precomputed δ)
+  m.def("subcomplex",
+        static_cast<SubcomplexResult (*)(const Complex&, const Marker&)>(&subcomplex),
+        py::arg("complex"), py::arg("cells"));
 
   py::class_<CutResult>(m, "CutResult")
       .def_readonly("complex", &CutResult::complex)
@@ -339,7 +346,9 @@ PYBIND11_MODULE(_core, m) {
       .def_readonly("complex", &OrientationResult::complex)
       .def_readonly("map", &OrientationResult::map)
       .def_readonly("orientable", &OrientationResult::orientable);
-  m.def("orient", &orient, py::arg("complex"));
+  // overloaded (explicit stratum and top-stratum default)
+  m.def("orient", static_cast<OrientationResult (*)(const Complex&)>(&orient),
+        py::arg("complex"));
 
   py::class_<AgglomerationResult>(m, "AgglomerationResult")
       .def_readonly("complex", &AgglomerationResult::complex)
