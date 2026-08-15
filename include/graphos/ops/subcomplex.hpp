@@ -155,10 +155,9 @@ inline SubcomplexResult subcomplex(const Complex& c, const Marker& cells,
   if (static_cast<int>(cob.size()) < c.dim()) {
     throw std::invalid_argument("subcomplex: need coboundary operators for k = 0..dim-1");
   }
-  return detail::subcomplex_via(c, cells,
-                                [&](int k) -> const CoboundaryOperator& {
-                                  return cob[static_cast<std::size_t>(k)];
-                                });
+  return detail::subcomplex_via(c, cells, [&](int k) -> const CoboundaryOperator& {
+    return cob[static_cast<std::size_t>(k)];
+  });
 }
 
 }  // namespace graphos

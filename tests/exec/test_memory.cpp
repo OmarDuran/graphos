@@ -1,8 +1,7 @@
-#include "graphos/exec/memory.hpp"
-
 #include <utility>
 
 #include "graphos/core/types.hpp"
+#include "graphos/exec/memory.hpp"
 #include "graphos_test.hpp"
 
 using graphos::Index;

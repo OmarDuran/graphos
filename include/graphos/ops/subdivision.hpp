@@ -78,8 +78,8 @@ inline SubdivisionResult barycentric_subdivision(const Complex& c) {
   struct Chain {
     std::vector<Index> flat;
     std::vector<std::pair<int, Index>> elems;
-    bool full{false};   // dimensions are exactly 0..k
-    Sign csign{0};      // ∏ incidence signs along the flag (0 unless full)
+    bool full{false};  // dimensions are exactly 0..k
+    Sign csign{0};     // ∏ incidence signs along the flag (0 unless full)
   };
   std::vector<std::vector<Chain>> chains(static_cast<std::size_t>(dim) + 1);
   std::vector<std::map<std::vector<Index>, Index>> chain_index(static_cast<std::size_t>(dim) + 1);

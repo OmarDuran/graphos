@@ -1,5 +1,4 @@
 #include "graphos/core/types.hpp"
-
 #include "graphos_test.hpp"
 
 using graphos::ChainMap;

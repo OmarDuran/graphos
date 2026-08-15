@@ -1,8 +1,6 @@
-#include "graphos/ops/join.hpp"
-
-#include "graphos/queries/homology.hpp"
-
 #include "fixtures.hpp"
+#include "graphos/ops/join.hpp"
+#include "graphos/queries/homology.hpp"
 #include "graphos_test.hpp"
 
 using graphos::Index;

@@ -1,8 +1,7 @@
-#include "graphos/core/coboundary.hpp"
-
 #include <vector>
 
 #include "fixtures.hpp"
+#include "graphos/core/coboundary.hpp"
 #include "graphos_test.hpp"
 
 namespace {

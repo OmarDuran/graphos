@@ -1,8 +1,6 @@
-#include "graphos/queries/manifold.hpp"
-
-#include "graphos/core/build.hpp"
-
 #include "fixtures.hpp"
+#include "graphos/core/build.hpp"
+#include "graphos/queries/manifold.hpp"
 #include "graphos_test.hpp"
 
 using graphos::Index;

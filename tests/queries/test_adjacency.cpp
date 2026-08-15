@@ -1,8 +1,7 @@
-#include "graphos/queries/adjacency.hpp"
-
 #include <vector>
 
 #include "fixtures.hpp"
+#include "graphos/queries/adjacency.hpp"
 #include "graphos_test.hpp"
 
 using graphos::Index;

@@ -1,8 +1,6 @@
-#include "graphos/ops/lift_identifications.hpp"
-
-#include "graphos/ops/quotient.hpp"
-
 #include "fixtures.hpp"
+#include "graphos/ops/lift_identifications.hpp"
+#include "graphos/ops/quotient.hpp"
 #include "graphos_test.hpp"
 
 using graphos::Index;
@@ -53,9 +51,9 @@ GRAPHOS_TEST(periodic_square_becomes_a_cylinder) {
   const auto ids = graphos::lift_identifications(c, {{0, 1, +1}, {3, 2, +1}});
   CHECK(ids[0].size() == 2);
   CHECK(ids[1].size() == 1);
-  CHECK(ids[1][0].from == 3);      // l
-  CHECK(ids[1][0].to == 1);        // r
-  CHECK(ids[1][0].rel_sign == +1); // same orientation
+  CHECK(ids[1][0].from == 3);       // l
+  CHECK(ids[1][0].to == 1);         // r
+  CHECK(ids[1][0].rel_sign == +1);  // same orientation
   CHECK(ids[2].empty());
 
   const auto q = graphos::quotient(c, ids);

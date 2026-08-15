@@ -1,7 +1,5 @@
 #include "graphos/exec/forall.hpp"
-
 #include "graphos/exec/memory.hpp"
-
 #include "graphos_test.hpp"
 
 using graphos::Index;

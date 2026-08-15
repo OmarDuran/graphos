@@ -29,8 +29,7 @@ void assert_laws(const graphos::Complex& c) {
 void assert_chain_map_valid(const graphos::ChainMap& m, const graphos::Complex& target) {
   for (std::size_t k = 0; k < m.index.size(); ++k) {
     for (const Index i : m.index[k]) {
-      CHECK(i == graphos::invalid_index ||
-            (i >= 0 && i < target.count(static_cast<int>(k))));
+      CHECK(i == graphos::invalid_index || (i >= 0 && i < target.count(static_cast<int>(k))));
     }
   }
 }
@@ -86,8 +85,7 @@ GRAPHOS_TEST(random_complexes_through_random_ops) {
           for (std::size_t k = 0; k < r.embedding.index.size(); ++k) {
             for (std::size_t i = 0; i < r.embedding.index[k].size(); ++i) {
               const Index parent = r.embedding.index[k][i];
-              CHECK(r.map.index[k][static_cast<std::size_t>(parent)] ==
-                    static_cast<Index>(i));
+              CHECK(r.map.index[k][static_cast<std::size_t>(parent)] == static_cast<Index>(i));
             }
           }
           c = r.complex;
@@ -186,8 +184,8 @@ GRAPHOS_TEST(subdivision_preserves_homotopy_of_random_complexes) {
       int sum = 0;
       for (Index m = lo; m < hi; ++m) {
         sum += cob.signs[static_cast<std::size_t>(m)] *
-               osd.carrier_sign[static_cast<std::size_t>(n)][static_cast<std::size_t>(
-                   cob.indices[static_cast<std::size_t>(m)])];
+               osd.carrier_sign[static_cast<std::size_t>(n)]
+                               [static_cast<std::size_t>(cob.indices[static_cast<std::size_t>(m)])];
       }
       CHECK(sum == 0);
     }

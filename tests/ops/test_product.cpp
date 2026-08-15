@@ -1,6 +1,5 @@
-#include "graphos/ops/product.hpp"
-
 #include "fixtures.hpp"
+#include "graphos/ops/product.hpp"
 #include "graphos_test.hpp"
 
 using graphos::Index;
@@ -36,8 +35,8 @@ GRAPHOS_TEST(triangle_extruded_is_a_prism) {
   prod.complex.validate();
   CHECK(prod.complex.dim() == 3);
   CHECK(prod.complex.count(0) == 6);
-  CHECK(prod.complex.count(1) == 9);   // 3 edges x 2 layers + 3 verticals
-  CHECK(prod.complex.count(2) == 5);   // 2 lids + 3 side quads
+  CHECK(prod.complex.count(1) == 9);  // 3 edges x 2 layers + 3 verticals
+  CHECK(prod.complex.count(2) == 5);  // 2 lids + 3 side quads
   CHECK(prod.complex.count(3) == 1);
   CHECK(graphos::d_squared_is_zero(prod.complex));
   CHECK(graphos::euler_characteristic(prod.complex) == 1);

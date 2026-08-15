@@ -98,13 +98,12 @@ GRAPHOS_TEST(storage_matches_the_csr_memory_model) {
   // model: tet-mesh nnz/cell ~ 2.8, each entry 5 bytes (+ offsets), per
   // direction — ∂ alone ~ 18 B/cell, ∂ + δ ~ 36 B/cell
   const double boundary_per_cell = static_cast<double>(stored_bytes(c)) / cells;
-  const double both_per_cell =
-      static_cast<double>(stored_bytes(c) + coboundary_bytes(c)) / cells;
-  std::printf("  storage: boundary %.1f B/cell, with coboundary %.1f B/cell\n",
-              boundary_per_cell, both_per_cell);
-  CHECK(boundary_per_cell > 10.0);   // sanity: the model itself
-  CHECK(boundary_per_cell < 30.0);   // ∂ storage has not bloated
-  CHECK(both_per_cell < 60.0);       // frozen-complex-equivalent budget
+  const double both_per_cell = static_cast<double>(stored_bytes(c) + coboundary_bytes(c)) / cells;
+  std::printf("  storage: boundary %.1f B/cell, with coboundary %.1f B/cell\n", boundary_per_cell,
+              both_per_cell);
+  CHECK(boundary_per_cell > 10.0);  // sanity: the model itself
+  CHECK(boundary_per_cell < 30.0);  // ∂ storage has not bloated
+  CHECK(both_per_cell < 60.0);      // frozen-complex-equivalent budget
 }
 
 GRAPHOS_TEST(bulk_op_throughput_tracks_memory_bandwidth) {

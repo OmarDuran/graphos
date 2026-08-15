@@ -1,5 +1,4 @@
 #include "graphos/core/union_find.hpp"
-
 #include "graphos_test.hpp"
 
 using graphos::Index;

@@ -77,7 +77,8 @@ inline JoinResult join(const Complex& a, const Complex& b) {
     if (k <= a.dim()) {
       const BoundaryOperator& bnd = a.boundary(k);
       for (Index e = 0; e < a.count(k); ++e) {
-        row_idx.assign(bnd.indices.begin() + bnd.offsets[e], bnd.indices.begin() + bnd.offsets[e + 1]);
+        row_idx.assign(bnd.indices.begin() + bnd.offsets[e],
+                       bnd.indices.begin() + bnd.offsets[e + 1]);
         row_sg.assign(bnd.signs.begin() + bnd.offsets[e], bnd.signs.begin() + bnd.offsets[e + 1]);
         out.attach_cell(k, std::span<const Index>(row_idx), std::span<const Sign>(row_sg));
       }

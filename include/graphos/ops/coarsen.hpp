@@ -89,7 +89,8 @@ inline CoarsenResult coarsen(const Complex& c, const std::vector<Index>& top_lab
     rows[static_cast<std::size_t>(n)].resize(static_cast<std::size_t>(n_agg));
     for (Index e = 0; e < c.count(n); ++e) {
       std::map<Index, int>& row =
-          rows[static_cast<std::size_t>(n)][static_cast<std::size_t>(top_labels[static_cast<std::size_t>(e)])];
+          rows[static_cast<std::size_t>(n)]
+              [static_cast<std::size_t>(top_labels[static_cast<std::size_t>(e)])];
       for (Index m = bnd.offsets[e]; m < bnd.offsets[e + 1]; ++m) {
         row[bnd.indices[m]] += bnd.signs[m];
       }
@@ -263,8 +264,7 @@ inline CoarsenResult coarsen(const Complex& c, const std::vector<Index>& top_lab
     std::vector<char> patch_done(patches.size(), 0);
     for (Index f = 0; f < nk; ++f) {
       const std::size_t sf = static_cast<std::size_t>(f);
-      const bool maximal =
-          cob.offsets[sf + 1] == cob.offsets[sf];
+      const bool maximal = cob.offsets[sf + 1] == cob.offsets[sf];
       if (sig[sf].empty() && !maximal) continue;  // interior: sent to zero
       const Index pid = patch_of[sf];
       if (pid != invalid_index) {

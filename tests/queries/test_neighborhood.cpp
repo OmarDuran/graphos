@@ -1,6 +1,5 @@
-#include "graphos/queries/neighborhood.hpp"
-
 #include "fixtures.hpp"
+#include "graphos/queries/neighborhood.hpp"
 #include "graphos_test.hpp"
 
 using graphos::Index;

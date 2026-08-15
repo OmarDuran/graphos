@@ -17,8 +17,7 @@ namespace detail {
 inline Index rank_z2(const Complex& c, int k, const std::vector<std::vector<char>>* excluded) {
   const auto symdiff = [](const std::vector<Index>& a, const std::vector<Index>& b) {
     std::vector<Index> out;
-    std::set_symmetric_difference(a.begin(), a.end(), b.begin(), b.end(),
-                                  std::back_inserter(out));
+    std::set_symmetric_difference(a.begin(), a.end(), b.begin(), b.end(), std::back_inserter(out));
     return out;
   };
 

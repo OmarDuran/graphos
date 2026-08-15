@@ -1,6 +1,5 @@
-#include "graphos/ops/disjoint_union.hpp"
-
 #include "fixtures.hpp"
+#include "graphos/ops/disjoint_union.hpp"
 #include "graphos_test.hpp"
 
 GRAPHOS_TEST(mixed_dimensional_coproduct) {

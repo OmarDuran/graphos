@@ -1,9 +1,7 @@
-#include "graphos/queries/components.hpp"
-
+#include "fixtures.hpp"
 #include "graphos/ops/cut.hpp"
 #include "graphos/ops/disjoint_union.hpp"
-
-#include "fixtures.hpp"
+#include "graphos/queries/components.hpp"
 #include "graphos_test.hpp"
 
 using graphos::Index;

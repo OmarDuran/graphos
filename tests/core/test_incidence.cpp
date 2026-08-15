@@ -1,8 +1,7 @@
-#include "graphos/core/incidence.hpp"
-
 #include <vector>
 
 #include "fixtures.hpp"
+#include "graphos/core/incidence.hpp"
 #include "graphos_test.hpp"
 
 using graphos::Index;
@@ -28,7 +27,7 @@ GRAPHOS_TEST(downward_closure_levels) {
 
 GRAPHOS_TEST(upward_star_levels) {
   const graphos::Complex c = graphos_test::make_two_triangle_disk();
-  const auto v2f = graphos::incidence(c, 0, 2);  // vertex -> faces
+  const auto v2f = graphos::incidence(c, 0, 2);      // vertex -> faces
   CHECK(row(v2f, 0) == (std::vector<Index>{0, 1}));  // shared vertex: both
   CHECK(row(v2f, 2) == (std::vector<Index>{0}));     // A's apex
   CHECK(row(v2f, 3) == (std::vector<Index>{1}));     // B's apex

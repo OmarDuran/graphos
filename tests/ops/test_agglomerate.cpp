@@ -1,8 +1,6 @@
-#include "graphos/ops/agglomerate.hpp"
-
-#include "graphos/ops/orient.hpp"
-
 #include "fixtures.hpp"
+#include "graphos/ops/agglomerate.hpp"
+#include "graphos/ops/orient.hpp"
 #include "graphos_test.hpp"
 
 using graphos::Index;
@@ -70,9 +68,9 @@ GRAPHOS_TEST(detects_inconsistent_orientation) {
 
 GRAPHOS_TEST(rejects_bad_labels) {
   const graphos::Complex c = graphos_test::make_fan();
-  CHECK_THROWS(graphos::agglomerate(c, {0, 0, 1}));        // wrong size
-  CHECK_THROWS(graphos::agglomerate(c, {0, 0, 2, 2}));     // id 1 unused
-  CHECK_THROWS(graphos::agglomerate(c, {0, 0, -1, 1}));    // negative
+  CHECK_THROWS(graphos::agglomerate(c, {0, 0, 1}));      // wrong size
+  CHECK_THROWS(graphos::agglomerate(c, {0, 0, 2, 2}));   // id 1 unused
+  CHECK_THROWS(graphos::agglomerate(c, {0, 0, -1, 1}));  // negative
 }
 
 GRAPHOS_TEST_MAIN()

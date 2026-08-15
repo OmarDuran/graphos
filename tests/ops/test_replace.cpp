@@ -12,17 +12,15 @@
 // area-0.3 pieces are bad cuts and are healed into their same-side
 // neighbors below/above.
 
-#include "graphos/ops/replace.hpp"
-
 #include <vector>
 
+#include "fixtures.hpp"
 #include "graphos/core/build.hpp"
 #include "graphos/ops/agglomerate.hpp"
-#include "graphos/queries/components.hpp"
 #include "graphos/ops/orient.hpp"
 #include "graphos/ops/product.hpp"
-
-#include "fixtures.hpp"
+#include "graphos/ops/replace.hpp"
+#include "graphos/queries/components.hpp"
 #include "graphos_test.hpp"
 
 using graphos::Index;
@@ -52,8 +50,7 @@ GRAPHOS_TEST(replace_face_with_fan) {
   region.mark(2, 1);  // face B only; its edges survive as the frontier
 
   // patch: fan over B's triangle (vertices 0,1,3 -> patch 0,1,2; center 3)
-  const graphos::Complex fan =
-      graphos::from_simplices(2, 4, {{0, 1, 3}, {1, 2, 3}, {2, 0, 3}});
+  const graphos::Complex fan = graphos::from_simplices(2, 4, {{0, 1, 3}, {1, 2, 3}, {2, 0, 3}});
   const auto r = graphos::replace(disk, region, fan, {{0, 0, +1}, {1, 1, +1}, {2, 3, +1}});
   r.complex.validate();
   CHECK(graphos::d_squared_is_zero(r.complex));
@@ -90,9 +87,12 @@ GRAPHOS_TEST(inclined_cut_imprint_and_bad_cut_healing) {
   // the imprinted patch for the swath y∈[1,2]: bottom vertices b_i (0..3),
   // top t_i (4..7), cut points p_i (8..11); three lower and three upper
   // trapezoids, wound CCW
-  const graphos::Complex patch = graphos::from_polygons(
-      12, {{0, 1, 9, 8},  {1, 2, 10, 9},  {2, 3, 11, 10},    // lower pieces
-           {8, 9, 5, 4},  {9, 10, 6, 5},  {10, 11, 7, 6}});  // upper pieces
+  const graphos::Complex patch = graphos::from_polygons(12, {{0, 1, 9, 8},
+                                                             {1, 2, 10, 9},
+                                                             {2, 3, 11, 10},  // lower pieces
+                                                             {8, 9, 5, 4},
+                                                             {9, 10, 6, 5},
+                                                             {10, 11, 7, 6}});  // upper pieces
 
   // glue: patch bottom/top rows onto the surviving host lattice rows
   std::vector<graphos::Identification> glue;

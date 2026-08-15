@@ -1,6 +1,5 @@
-#include "graphos/ops/pushout.hpp"
-
 #include "fixtures.hpp"
+#include "graphos/ops/pushout.hpp"
 #include "graphos_test.hpp"
 
 // Pushout of two triangles along a shared edge, with B attached through

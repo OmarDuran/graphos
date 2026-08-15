@@ -39,8 +39,8 @@ inline FacetClassification classify_facets(const Complex& c) {
   FacetClassification out{Marker(c), Marker(c), Marker(c), Marker(c)};
   const CoboundaryOperator cob = coboundary(c, n - 1);
   for (Index f = 0; f < c.count(n - 1); ++f) {
-    const Index degree = cob.offsets[static_cast<std::size_t>(f) + 1] -
-                         cob.offsets[static_cast<std::size_t>(f)];
+    const Index degree =
+        cob.offsets[static_cast<std::size_t>(f) + 1] - cob.offsets[static_cast<std::size_t>(f)];
     Marker& target = degree == 0   ? out.maximal
                      : degree == 1 ? out.boundary
                      : degree == 2 ? out.interior
@@ -49,7 +49,6 @@ inline FacetClassification classify_facets(const Complex& c) {
   }
   return out;
 }
-
 
 // Is the complex CLOSED — is its boundary empty (∂K = ∅)? Evaluated at the
 // effective top dimension (largest nonempty stratum): closed iff no facet
@@ -64,8 +63,7 @@ inline bool is_closed(const Complex& c) {
   if (d == 0) return true;
   const CoboundaryOperator cob = coboundary(c, d - 1);
   for (Index f = 0; f < c.count(d - 1); ++f) {
-    if (cob.offsets[static_cast<std::size_t>(f) + 1] -
-            cob.offsets[static_cast<std::size_t>(f)] ==
+    if (cob.offsets[static_cast<std::size_t>(f) + 1] - cob.offsets[static_cast<std::size_t>(f)] ==
         1) {
       return false;
     }
@@ -74,4 +72,3 @@ inline bool is_closed(const Complex& c) {
 }
 
 }  // namespace graphos
-

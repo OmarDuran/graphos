@@ -35,12 +35,10 @@ GRAPHOS_TEST(ops_scale_subquadratically) {
   const auto small_tets = graphos_bench::kuhn_tets(n_small);
   const auto large_tets = graphos_bench::kuhn_tets(n_large);
 
-  const double build_s = best_of_3_ms([&] {
-    graphos::from_simplices(3, graphos_bench::kuhn_vertex_count(n_small), small_tets);
-  });
-  const double build_l = best_of_3_ms([&] {
-    graphos::from_simplices(3, graphos_bench::kuhn_vertex_count(n_large), large_tets);
-  });
+  const double build_s = best_of_3_ms(
+      [&] { graphos::from_simplices(3, graphos_bench::kuhn_vertex_count(n_small), small_tets); });
+  const double build_l = best_of_3_ms(
+      [&] { graphos::from_simplices(3, graphos_bench::kuhn_vertex_count(n_large), large_tets); });
 
   graphos::Complex cs =
       graphos::from_simplices(3, graphos_bench::kuhn_vertex_count(n_small), small_tets);

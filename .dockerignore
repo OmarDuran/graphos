@@ -1,0 +1,15 @@
+# keep build trees, caches and editor state out of the context: they are large,
+# they are host-specific, and copying them in would invalidate a layer on every
+# local rebuild for no gain
+build*/
+.spack-env/
+tpl/
+install/
+.git/
+.github/
+**/__pycache__/
+**/*.o
+**/*.so
+**/*.dylib
+**/*.vtu
+.DS_Store

@@ -1,10 +1,8 @@
-#include "graphos/ops/subdivision.hpp"
-
+#include "fixtures.hpp"
 #include "graphos/core/build.hpp"
 #include "graphos/core/coboundary.hpp"
 #include "graphos/ops/orient.hpp"
-
-#include "fixtures.hpp"
+#include "graphos/ops/subdivision.hpp"
 #include "graphos_test.hpp"
 
 using graphos::Index;
@@ -47,9 +45,9 @@ GRAPHOS_TEST(segment_subdivides_into_two_edges) {
 GRAPHOS_TEST(triangle_subdivides_into_six_triangles) {
   const auto sd = graphos::barycentric_subdivision(graphos_test::make_triangle());
   sd.complex.validate();
-  CHECK(sd.complex.count(0) == 7);   // 3 + 3 + 1 barycenters
-  CHECK(sd.complex.count(1) == 12);  // v<e: 6, v<f: 3, e<f: 3
-  CHECK(sd.complex.count(2) == 6);   // full flags v<e<f
+  CHECK(sd.complex.count(0) == 7);                // 3 + 3 + 1 barycenters
+  CHECK(sd.complex.count(1) == 12);               // v<e: 6, v<f: 3, e<f: 3
+  CHECK(sd.complex.count(2) == 6);                // full flags v<e<f
   CHECK(graphos::d_squared_is_zero(sd.complex));  // the (−1)^m chain signs
   CHECK(graphos::euler_characteristic(sd.complex) == 1);
 
@@ -93,8 +91,8 @@ GRAPHOS_TEST(signed_carrier_is_the_incidence_product) {
     if (s == 0) ++zeros;
     if (s == 1 || s == -1) ++units;
   }
-  CHECK(zeros == 6);   // 3 jumps (v<F) + 3 chains (e<F)
-  CHECK(units == 6);   // the full flags (v<e)
+  CHECK(zeros == 6);  // 3 jumps (v<F) + 3 chains (e<F)
+  CHECK(units == 6);  // the full flags (v<e)
   // every top sd cell is a full flag: coefficient ±1
   for (const graphos::Sign s : sd.carrier_sign[2]) CHECK(s == 1 || s == -1);
   CHECK(sd.carrier_sign[2][0] == -1);  // (v0<e0<F) = (−1)·(+1)

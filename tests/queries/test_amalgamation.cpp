@@ -1,10 +1,8 @@
-#include "graphos/queries/amalgamation.hpp"
-
+#include "fixtures.hpp"
 #include "graphos/core/build.hpp"
 #include "graphos/ops/lift_identifications.hpp"
 #include "graphos/ops/quotient.hpp"
-
-#include "fixtures.hpp"
+#include "graphos/queries/amalgamation.hpp"
 #include "graphos_test.hpp"
 
 using graphos::Index;
@@ -27,8 +25,7 @@ GRAPHOS_TEST(cells_sharing_one_facet_amalgamate) {
 // pentagon also touching the quad's far vertex. The excess intersection is
 // exactly that vertex — the amalgamated cell would be pinched there.
 GRAPHOS_TEST(excess_intersection_detects_the_pinch) {
-  const graphos::Complex c =
-      graphos::from_polygons(8, {{0, 1, 2, 3}, {1, 0, 6, 2, 7}});
+  const graphos::Complex c = graphos::from_polygons(8, {{0, 1, 2, 3}, {1, 0, 6, 2, 7}});
   const auto shared = graphos::common_boundary(c, 2, 0, 1);
   CHECK(shared.n_facets == 1);  // only the edge (0,1) is common boundary
   CHECK(shared.acyclic);
@@ -63,8 +60,7 @@ GRAPHOS_TEST(circular_common_boundary_is_not_acyclic) {
 }
 
 GRAPHOS_TEST(disjoint_cells_share_no_boundary) {
-  const graphos::Complex c =
-      graphos::from_polygons(8, {{0, 1, 2, 3}, {4, 5, 6, 7}});
+  const graphos::Complex c = graphos::from_polygons(8, {{0, 1, 2, 3}, {4, 5, 6, 7}});
   const auto shared = graphos::common_boundary(c, 2, 0, 1);
   CHECK(shared.n_facets == 0);
   CHECK(!shared.acyclic);

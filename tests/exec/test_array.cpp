@@ -1,9 +1,8 @@
-#include "graphos/exec/array.hpp"
-
 #include <utility>
 #include <vector>
 
 #include "graphos/core/types.hpp"
+#include "graphos/exec/array.hpp"
 #include "graphos_test.hpp"
 
 using graphos::Index;

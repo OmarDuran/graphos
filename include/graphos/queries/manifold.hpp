@@ -46,8 +46,8 @@ inline ManifoldReport check_manifold(const Complex& c) {
   // facets: coface counts
   const CoboundaryOperator cob = coboundary(c, n - 1);
   for (Index f = 0; f < c.count(n - 1); ++f) {
-    const Index deg = cob.offsets[static_cast<std::size_t>(f) + 1] -
-                      cob.offsets[static_cast<std::size_t>(f)];
+    const Index deg =
+        cob.offsets[static_cast<std::size_t>(f) + 1] - cob.offsets[static_cast<std::size_t>(f)];
     if (deg == 0) {
       rep.pure = false;
       rep.offending.mark(n - 1, f);
@@ -98,7 +98,6 @@ inline ManifoldReport check_manifold(const Complex& c) {
   rep.manifold_like = rep.pure && rep.facet_condition && rep.links_connected;
   return rep;
 }
-
 
 // The LINK SPHERE PROPERTY, per vertex: an interior vertex of a
 // combinatorial d-manifold has lk(v) ≅ S^{d-1}, a boundary vertex has
@@ -169,4 +168,3 @@ inline LinkClassification classify_vertex_links(const Complex& c) {
 }
 
 }  // namespace graphos
-

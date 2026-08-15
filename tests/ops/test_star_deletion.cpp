@@ -1,8 +1,6 @@
-#include "graphos/ops/star_deletion.hpp"
-
-#include "graphos/ops/pushout.hpp"
-
 #include "fixtures.hpp"
+#include "graphos/ops/pushout.hpp"
+#include "graphos/ops/star_deletion.hpp"
 #include "graphos_test.hpp"
 
 // Deleting the star of one apex of a two-triangle disk sweeps out its two

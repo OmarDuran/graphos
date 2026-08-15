@@ -1,8 +1,7 @@
-#include "graphos/ops/cut.hpp"
-
 #include <vector>
 
 #include "fixtures.hpp"
+#include "graphos/ops/cut.hpp"
 #include "graphos_test.hpp"
 
 // Cut a two-triangle disk along the shared edge. The interface spans the

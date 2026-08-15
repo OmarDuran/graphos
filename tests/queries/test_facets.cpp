@@ -1,9 +1,7 @@
-#include "graphos/queries/facets.hpp"
-
+#include "fixtures.hpp"
 #include "graphos/ops/cut.hpp"
 #include "graphos/ops/subcomplex.hpp"
-
-#include "fixtures.hpp"
+#include "graphos/queries/facets.hpp"
 #include "graphos_test.hpp"
 
 using graphos::Index;

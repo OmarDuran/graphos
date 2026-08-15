@@ -43,8 +43,7 @@ std::vector<Index> quad_parents(int n) {
   std::vector<Index> labels(static_cast<std::size_t>(n) * n);
   for (int i = 0; i < n; ++i)
     for (int j = 0; j < n; ++j)
-      labels[static_cast<std::size_t>(i * n + j)] =
-          static_cast<Index>((i / 2) * (n / 2) + (j / 2));
+      labels[static_cast<std::size_t>(i * n + j)] = static_cast<Index>((i / 2) * (n / 2) + (j / 2));
   return labels;
 }
 
@@ -53,8 +52,8 @@ std::vector<Index> hex_parents(int n) {
   for (int i = 0; i < n; ++i)
     for (int j = 0; j < n; ++j)
       for (int k = 0; k < n; ++k)
-        labels[static_cast<std::size_t>((i * n + j) * n + k)] = static_cast<Index>(
-            ((i / 2) * (n / 2) + (j / 2)) * (n / 2) + (k / 2));
+        labels[static_cast<std::size_t>((i * n + j) * n + k)] =
+            static_cast<Index>(((i / 2) * (n / 2) + (j / 2)) * (n / 2) + (k / 2));
   return labels;
 }
 
@@ -77,7 +76,8 @@ void check_seams(const graphos::Complex& fine, const graphos::AgglomerationResul
     std::vector<Index> from_fine;
     for (Index m = cob_f.offsets[static_cast<std::size_t>(f)];
          m < cob_f.offsets[static_cast<std::size_t>(f) + 1]; ++m) {
-      from_fine.push_back(parents[static_cast<std::size_t>(cob_f.indices[static_cast<std::size_t>(m)])]);
+      from_fine.push_back(
+          parents[static_cast<std::size_t>(cob_f.indices[static_cast<std::size_t>(m)])]);
     }
     std::sort(from_fine.begin(), from_fine.end());
     from_fine.erase(std::unique(from_fine.begin(), from_fine.end()), from_fine.end());

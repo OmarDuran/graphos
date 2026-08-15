@@ -1,12 +1,10 @@
-#include "graphos/ops/orient.hpp"
-
+#include "fixtures.hpp"
 #include "graphos/core/coboundary.hpp"
 #include "graphos/ops/disjoint_union.hpp"
 #include "graphos/ops/lift_identifications.hpp"
+#include "graphos/ops/orient.hpp"
 #include "graphos/ops/product.hpp"
 #include "graphos/ops/quotient.hpp"
-
-#include "fixtures.hpp"
 #include "graphos_test.hpp"
 
 using graphos::Index;
@@ -99,7 +97,6 @@ GRAPHOS_TEST(zero_dimensional_complex_is_trivially_orientable) {
   CHECK(o.orientable);
   CHECK(o.complex.count(0) == 5);
 }
-
 
 // ---- the orientation classes, and the sign they leave free ----------------
 
@@ -206,8 +203,8 @@ GRAPHOS_TEST(non_maximal_cells_are_not_reoriented) {
 GRAPHOS_TEST(a_maximal_lower_stratum_is_oriented) {
   graphos::Complex c(1);
   c.attach_vertices(3);
-  c.attach_cell(1, {0, 1}, {-1, +1});   // 0 -> 1
-  c.attach_cell(1, {2, 1}, {-1, +1});   // 2 -> 1, so vertex 1 is induced twice with +1
+  c.attach_cell(1, {0, 1}, {-1, +1});  // 0 -> 1
+  c.attach_cell(1, {2, 1}, {-1, +1});  // 2 -> 1, so vertex 1 is induced twice with +1
   const auto o = graphos::orient(c, 1);
   CHECK(o.orientable);
   CHECK(o.classes == 1);

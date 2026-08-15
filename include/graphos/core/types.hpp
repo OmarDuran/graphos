@@ -67,8 +67,8 @@ inline ChainMap compose(const ChainMap& first, const ChainMap& second) {
       const Index fin = second.index[k][static_cast<std::size_t>(mid)];
       out.index[k][i] = fin;
       if (fin != invalid_index) {
-        out.sign[k][i] = static_cast<Sign>(first.sign[k][i] *
-                                           second.sign[k][static_cast<std::size_t>(mid)]);
+        out.sign[k][i] =
+            static_cast<Sign>(first.sign[k][i] * second.sign[k][static_cast<std::size_t>(mid)]);
       }
     }
   }

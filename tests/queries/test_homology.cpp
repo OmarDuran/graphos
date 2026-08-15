@@ -1,14 +1,12 @@
-#include "graphos/queries/homology.hpp"
-
-#include "graphos/queries/facets.hpp"
+#include "fixtures.hpp"
 #include "graphos/ops/cut.hpp"
-#include "graphos/queries/neighborhood.hpp"
-#include "graphos/ops/star_deletion.hpp"
 #include "graphos/ops/lift_identifications.hpp"
 #include "graphos/ops/product.hpp"
 #include "graphos/ops/quotient.hpp"
-
-#include "fixtures.hpp"
+#include "graphos/ops/star_deletion.hpp"
+#include "graphos/queries/facets.hpp"
+#include "graphos/queries/homology.hpp"
+#include "graphos/queries/neighborhood.hpp"
 #include "graphos_test.hpp"
 
 using graphos::Index;

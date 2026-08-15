@@ -34,8 +34,8 @@ inline Marker free_faces(const Complex& c) {
       }
     }
     for (Index i = 0; i < c.count(k); ++i) {
-      const Index direct = cob.offsets[static_cast<std::size_t>(i) + 1] -
-                           cob.offsets[static_cast<std::size_t>(i)];
+      const Index direct =
+          cob.offsets[static_cast<std::size_t>(i) + 1] - cob.offsets[static_cast<std::size_t>(i)];
       if (direct == 1 && higher[static_cast<std::size_t>(i)] == 0) out.mark(k, i);
     }
   }

@@ -4,15 +4,13 @@
 // markers, then assert that graphos's purely combinatorial descent
 // reproduces the exact coarse tensor meshes.
 
-#include "graphos/ops/coarsen.hpp"
-
 #include <array>
 #include <vector>
 
-#include "graphos/core/build.hpp"
-#include "graphos/ops/product.hpp"
-
 #include "fixtures.hpp"
+#include "graphos/core/build.hpp"
+#include "graphos/ops/coarsen.hpp"
+#include "graphos/ops/product.hpp"
 #include "graphos_test.hpp"
 
 using graphos::Index;
@@ -39,8 +37,7 @@ std::vector<Index> quad_parents(int n) {
   std::vector<Index> labels(static_cast<std::size_t>(n) * n);
   for (int i = 0; i < n; ++i)
     for (int j = 0; j < n; ++j)
-      labels[static_cast<std::size_t>(i * n + j)] =
-          static_cast<Index>((i / 2) * (n / 2) + (j / 2));
+      labels[static_cast<std::size_t>(i * n + j)] = static_cast<Index>((i / 2) * (n / 2) + (j / 2));
   return labels;
 }
 
@@ -49,8 +46,8 @@ std::vector<Index> hex_parents(int n) {
   for (int i = 0; i < n; ++i)
     for (int j = 0; j < n; ++j)
       for (int k = 0; k < n; ++k)
-        labels[static_cast<std::size_t>((i * n + j) * n + k)] = static_cast<Index>(
-            ((i / 2) * (n / 2) + (j / 2)) * (n / 2) + (k / 2));
+        labels[static_cast<std::size_t>((i * n + j) * n + k)] =
+            static_cast<Index>(((i / 2) * (n / 2) + (j / 2)) * (n / 2) + (k / 2));
   return labels;
 }
 
@@ -70,8 +67,7 @@ graphos::Marker hex_frame(const graphos::Complex& c, int n) {
   graphos::Marker m(c);
   const auto coords = [n](Index v) {
     const int s = n + 1;
-    return std::array<int, 3>{static_cast<int>(v) / (s * s),
-                              (static_cast<int>(v) / s) % s,
+    return std::array<int, 3>{static_cast<int>(v) / (s * s), (static_cast<int>(v) / s) % s,
                               static_cast<int>(v) % s};
   };
   for (int i = 0; i <= n; i += 2)
@@ -216,9 +212,9 @@ GRAPHOS_TEST(detached_cells_pass_through) {
 
 GRAPHOS_TEST(rejects_bad_labels) {
   const graphos::Complex fine = quad_mesh(2);
-  CHECK_THROWS(graphos::coarsen(fine, {0, 0, 0}));         // wrong size
-  CHECK_THROWS(graphos::coarsen(fine, {0, 0, 2, 2}));      // id 1 unused
-  CHECK_THROWS(graphos::coarsen(fine, {0, 0, -1, 1}));     // negative
+  CHECK_THROWS(graphos::coarsen(fine, {0, 0, 0}));      // wrong size
+  CHECK_THROWS(graphos::coarsen(fine, {0, 0, 2, 2}));   // id 1 unused
+  CHECK_THROWS(graphos::coarsen(fine, {0, 0, -1, 1}));  // negative
 }
 
 GRAPHOS_TEST_MAIN()

@@ -1,8 +1,6 @@
-#include "graphos/ops/subcomplex.hpp"
-
-#include "graphos/ops/cut.hpp"
-
 #include "fixtures.hpp"
+#include "graphos/ops/cut.hpp"
+#include "graphos/ops/subcomplex.hpp"
 #include "graphos_test.hpp"
 
 using graphos::Index;

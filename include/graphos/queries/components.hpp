@@ -35,8 +35,7 @@ inline ComponentLabels relabel(UnionFind& uf) {
   return out;
 }
 
-inline ComponentLabels components_via(const Complex& c, int k, int via,
-                                      const Marker* exclude_via) {
+inline ComponentLabels components_via(const Complex& c, int k, int via, const Marker* exclude_via) {
   if (k < 0 || k > c.dim() || via < 0 || via > c.dim()) {
     throw std::invalid_argument("connected_components: dimension out of range");
   }

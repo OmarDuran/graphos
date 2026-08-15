@@ -1,13 +1,43 @@
 name: ci
 
+# WHAT THIS WORKFLOW IS EVIDENCE ABOUT.
+#
+# Not "does graphos compile" -- the baseline job answers that in a minute. The
+# question the phased jobs answer is whether the INSTALLATION is reliable: a
+# machine with nothing on it, a third-party stack built from source, a package
+# installed from it, and a consumer that finds that package the way a user
+# would. Each phase is a separate job so a red run names its own cause:
+#
+#   phase 1  tpls       a third-party problem, not ours
+#   phase 2  library    ours
+#   phase 3  tests      a behaviour change
+#   phase 4  container  the recipe works on a machine that is not this one
+#
+# The stack is expensive, so phase 1 caches its prefix and the later phases
+# restore it. The cache key includes the build script itself: editing how the
+# TPLs are built invalidates it, which is the property that keeps the cache
+# from quietly testing a stack nobody builds any more.
+
 on:
   push:
     branches: [main]
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TPL_PREFIX: ${{ github.workspace }}/tpl
+
 jobs:
-  test:
-    name: ${{ matrix.name }}
+  # ---- the dependency-free path, which must never be slow -------------------
+  #
+  # graphos installs with no third-party libraries at all, and that path is
+  # what most users take. It is checked first, on three toolchains, and does
+  # not wait for anything.
+  baseline:
+    name: baseline ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -51,18 +81,142 @@ jobs:
       - name: bench smoke
         run: ./build/bench/graphos_bench 8
 
-  raja:
-    name: linux-raja-fetched
+  # ---- phase 1: the third-party stack ---------------------------------------
+  tpls:
+    name: 1. tpls
     runs-on: ubuntu-latest
+    outputs:
+      key: ${{ steps.key.outputs.value }}
     steps:
       - uses: actions/checkout@v4
+      - name: cache key
+        id: key
+        # the script is part of the key: change how the stack is built and the
+        # cache is not reused, which is the whole point of caching it
+        run: echo "value=tpl-ubuntu-latest-${{ hashFiles('scripts/build_tpls.sh') }}" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        id: cache
+        with:
+          path: ${{ env.TPL_PREFIX }}
+          key: ${{ steps.key.outputs.value }}
+      - name: build the stack
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          chmod +x scripts/build_tpls.sh
+          JOBS=4 scripts/build_tpls.sh "$TPL_PREFIX"
+      - name: what got installed
+        run: ls "$TPL_PREFIX/lib/cmake"
+
+  # ---- phase 2: the library, against that stack -----------------------------
+  library:
+    name: 2. library
+    runs-on: ubuntu-latest
+    needs: tpls
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: ${{ env.TPL_PREFIX }}
+          key: ${{ needs.tpls.outputs.key }}
+          fail-on-cache-miss: true
       - name: configure
         run: >
           cmake -S . -B build
           -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/install
+          -DCMAKE_PREFIX_PATH=$TPL_PREFIX
           -DGRAPHOS_ENABLE_RAJA=ON
-          -DGRAPHOS_FETCH_TPL=ON
+          -DGRAPHOS_ENABLE_UMPIRE=ON
+          -DGRAPHOS_ENABLE_CHAI=ON
       - name: build
         run: cmake --build build -j 4
-      - name: test
+      - name: install
+        run: cmake --install build
+      # the build tree carries the test binaries phase 3 runs, and the install
+      # tree is what phase 3 checks a consumer against
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build-tree
+          path: |
+            build
+            install
+          retention-days: 1
+
+  # ---- phase 3: the tests, and whether the install is usable ----------------
+  tests:
+    name: 3. tests
+    runs-on: ubuntu-latest
+    needs: [tpls, library]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: ${{ env.TPL_PREFIX }}
+          key: ${{ needs.tpls.outputs.key }}
+          fail-on-cache-miss: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: build-tree
+      - name: restore executable bits
+        # artifacts do not preserve the mode bit
+        run: find build -type f -exec test -s {} \; -exec chmod +x {} + || true
+      - name: ctest
         run: ctest --test-dir build --output-on-failure
+      - name: bench smoke
+        run: ./build/bench/graphos_bench 8
+      # EVERYTHING ABOVE CAN PASS WHILE THE INSTALL IS UNUSABLE: a missing
+      # export, an absolute path baked into a config file, a dependency the
+      # exported target does not carry. So a fresh consumer is compiled against
+      # the install alone, which is the only thing a user ever sees.
+      - name: a consumer finds the installed package
+        run: |
+          mkdir -p /tmp/consumer && cd /tmp/consumer
+          cat > CMakeLists.txt <<'EOF'
+          cmake_minimum_required(VERSION 3.20)
+          project(consumer LANGUAGES CXX)
+          find_package(graphos CONFIG REQUIRED)
+          add_executable(consumer main.cpp)
+          target_link_libraries(consumer PRIVATE graphos::graphos)
+          EOF
+          cat > main.cpp <<'EOF'
+          #include <cstdio>
+          #include "graphos/graphos.hpp"
+          int main() {
+            graphos::Complex c(2);
+            c.attach_vertices(3);
+            c.attach_cell(1, {0, 1}, {-1, 1});
+            std::printf("consumer: dim=%d edges=%lld\n", c.dim(), (long long)c.count(1));
+            return c.count(1) == 1 ? 0 : 1;
+          }
+          EOF
+          cmake -S . -B build -DCMAKE_PREFIX_PATH="${{ github.workspace }}/install;$TPL_PREFIX"
+          cmake --build build
+          ./build/consumer
+
+  # ---- phase 4: the container -----------------------------------------------
+  #
+  # The Dockerfile runs the same four stages with the same scripts, from a base
+  # image with nothing on it. It is the only phase that proves the recipe does
+  # not depend on whatever a GitHub runner happens to have preinstalled.
+  container:
+    name: 4. container
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: build through every stage
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: consumer
+          push: false
+          load: true
+          tags: graphos:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: the runtime image carries a usable install
+        run: |
+          docker build -t graphos:runtime .
+          docker run --rm graphos:runtime \
+            test -f /opt/graphos/lib/cmake/graphos/graphosConfig.cmake
+          echo "runtime image exports graphosConfig.cmake"

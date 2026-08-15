@@ -86,8 +86,7 @@ inline std::vector<std::vector<Identification>> lift_identifications(
           fully_mapped = false;
           break;
         }
-        row.emplace_back(it->second.first,
-                         static_cast<Sign>(bnd.signs[m] * it->second.second));
+        row.emplace_back(it->second.first, static_cast<Sign>(bnd.signs[m] * it->second.second));
       }
       if (!fully_mapped) continue;
       std::sort(row.begin(), row.end(),

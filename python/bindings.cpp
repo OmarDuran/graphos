@@ -83,12 +83,13 @@ PYBIND11_MODULE(_core, m) {
       .def("count", &Complex::count, py::arg("k"))
       .def("counts", &Complex::counts)
       .def("validate", &Complex::validate)
-      .def("boundary",
-           [](const Complex& c, int k) {
-             const BoundaryOperator& b = c.boundary(k);
-             return csr_copy(b.offsets, b.indices, b.signs);
-           },
-           py::arg("k"), "CSR (offsets, indices, signs) of the boundary operator, as copies")
+      .def(
+          "boundary",
+          [](const Complex& c, int k) {
+            const BoundaryOperator& b = c.boundary(k);
+            return csr_copy(b.offsets, b.indices, b.signs);
+          },
+          py::arg("k"), "CSR (offsets, indices, signs) of the boundary operator, as copies")
       .def("__repr__", [](const Complex& c) {
         std::string s = "Complex(dim=" + std::to_string(c.dim()) + ", counts=[";
         for (int k = 0; k <= c.dim(); ++k) {
@@ -117,45 +118,50 @@ PYBIND11_MODULE(_core, m) {
 
   py::class_<ChainMap>(m, "ChainMap")
       .def_property_readonly("dims", [](const ChainMap& cm) { return cm.index.size(); })
-      .def("index",
-           [](const ChainMap& cm, std::size_t k) {
-             check_dim(k, cm.index.size(), "ChainMap.index");
-             return copy_array(cm.index[k]);
-           },
-           py::arg("k"))
-      .def("sign", [](const ChainMap& cm, std::size_t k) {
-        check_dim(k, cm.sign.size(), "ChainMap.sign");
-        return copy_array(cm.sign[k]);
-      },
-           py::arg("k"));
+      .def(
+          "index",
+          [](const ChainMap& cm, std::size_t k) {
+            check_dim(k, cm.index.size(), "ChainMap.index");
+            return copy_array(cm.index[k]);
+          },
+          py::arg("k"))
+      .def(
+          "sign",
+          [](const ChainMap& cm, std::size_t k) {
+            check_dim(k, cm.sign.size(), "ChainMap.sign");
+            return copy_array(cm.sign[k]);
+          },
+          py::arg("k"));
   m.def("compose", [](const ChainMap& a, const ChainMap& b) { return compose(a, b); });
 
   // ---- constructors ---------------------------------------------------
   m.def("from_edges", &from_edges, py::arg("n_vertices"), py::arg("segments"));
   m.def("from_polygons", &from_polygons, py::arg("n_vertices"), py::arg("polygons"));
   m.def("from_polyhedra", &from_polyhedra, py::arg("n_vertices"), py::arg("cells"));
-  m.def("from_simplices", &from_simplices, py::arg("dim"), py::arg("n_vertices"),
-        py::arg("cells"));
+  m.def("from_simplices", &from_simplices, py::arg("dim"), py::arg("n_vertices"), py::arg("cells"));
 
   // ---- derived operators ---------------------------------------------
-  m.def("coboundary",
-        [](const Complex& c, int k) {
-          const CoboundaryOperator cob = coboundary(c, k);
-          return csr_copy(cob.offsets, cob.indices, cob.signs);
-        },
-        py::arg("complex"), py::arg("k"));
-  m.def("incidence",
-        [](const Complex& c, int k, int j) {
-          const Adjacency a = incidence(c, k, j);
-          return py::make_tuple(copy_array(a.offsets), copy_array(a.indices));
-        },
-        py::arg("complex"), py::arg("k"), py::arg("j"));
-  m.def("adjacency",
-        [](const Complex& c, int k, int via) {
-          const Adjacency a = adjacency(c, k, via);
-          return py::make_tuple(copy_array(a.offsets), copy_array(a.indices));
-        },
-        py::arg("complex"), py::arg("k"), py::arg("via"));
+  m.def(
+      "coboundary",
+      [](const Complex& c, int k) {
+        const CoboundaryOperator cob = coboundary(c, k);
+        return csr_copy(cob.offsets, cob.indices, cob.signs);
+      },
+      py::arg("complex"), py::arg("k"));
+  m.def(
+      "incidence",
+      [](const Complex& c, int k, int j) {
+        const Adjacency a = incidence(c, k, j);
+        return py::make_tuple(copy_array(a.offsets), copy_array(a.indices));
+      },
+      py::arg("complex"), py::arg("k"), py::arg("j"));
+  m.def(
+      "adjacency",
+      [](const Complex& c, int k, int via) {
+        const Adjacency a = adjacency(c, k, via);
+        return py::make_tuple(copy_array(a.offsets), copy_array(a.indices));
+      },
+      py::arg("complex"), py::arg("k"), py::arg("via"));
 
   // ---- frozen (zero-copy views) --------------------------------------
   py::class_<FrozenComplex>(m, "FrozenComplex")
@@ -163,57 +169,57 @@ PYBIND11_MODULE(_core, m) {
       .def_property_readonly("halo_depth", &FrozenComplex::halo_depth)
       .def("count", &FrozenComplex::count, py::arg("k"))
       .def("counts", &FrozenComplex::counts)
-      .def("boundary",
-           [](py::object self_obj, int k) {
-             FrozenComplex& f = self_obj.cast<FrozenComplex&>();
+      .def(
+          "boundary",
+          [](py::object self_obj, int k) {
+            FrozenComplex& f = self_obj.cast<FrozenComplex&>();
 #if defined(GRAPHOS_HAVE_CHAI)
-             // CHAI-managed storage: fall back to row-wise copies
-             std::vector<Index> offsets{0};
-             std::vector<Index> indices;
-             std::vector<Sign> signs;
-             for (Index e = 0; e < f.count(k); ++e) {
-               const auto r = f.boundary_row(k, e);
-               indices.insert(indices.end(), r.indices, r.indices + r.size);
-               signs.insert(signs.end(), r.signs, r.signs + r.size);
-               offsets.push_back(static_cast<Index>(indices.size()));
-             }
-             return csr_copy(offsets, indices, signs);
+            // CHAI-managed storage: fall back to row-wise copies
+            std::vector<Index> offsets{0};
+            std::vector<Index> indices;
+            std::vector<Sign> signs;
+            for (Index e = 0; e < f.count(k); ++e) {
+              const auto r = f.boundary_row(k, e);
+              indices.insert(indices.end(), r.indices, r.indices + r.size);
+              signs.insert(signs.end(), r.signs, r.signs + r.size);
+              offsets.push_back(static_cast<Index>(indices.size()));
+            }
+            return csr_copy(offsets, indices, signs);
 #else
-             const CsrView v = f.boundary_view(k);
-             const py::ssize_t n = f.count(k);
-             const py::ssize_t nnz = v.offsets[static_cast<std::size_t>(n)];
-             return py::make_tuple(
-                 py::array_t<Index>({n + 1}, {sizeof(Index)}, v.offsets, self_obj),
-                 py::array_t<Index>({nnz}, {sizeof(Index)}, v.indices, self_obj),
-                 py::array_t<Sign>({nnz}, {sizeof(Sign)}, v.signs, self_obj));
+            const CsrView v = f.boundary_view(k);
+            const py::ssize_t n = f.count(k);
+            const py::ssize_t nnz = v.offsets[static_cast<std::size_t>(n)];
+            return py::make_tuple(py::array_t<Index>({n + 1}, {sizeof(Index)}, v.offsets, self_obj),
+                                  py::array_t<Index>({nnz}, {sizeof(Index)}, v.indices, self_obj),
+                                  py::array_t<Sign>({nnz}, {sizeof(Sign)}, v.signs, self_obj));
 #endif
-           },
-           py::arg("k"), "CSR (offsets, indices, signs) of ∂_k — zero-copy views")
-      .def("coboundary",
-           [](py::object self_obj, int k) {
-             FrozenComplex& f = self_obj.cast<FrozenComplex&>();
+          },
+          py::arg("k"), "CSR (offsets, indices, signs) of ∂_k — zero-copy views")
+      .def(
+          "coboundary",
+          [](py::object self_obj, int k) {
+            FrozenComplex& f = self_obj.cast<FrozenComplex&>();
 #if defined(GRAPHOS_HAVE_CHAI)
-             std::vector<Index> offsets{0};
-             std::vector<Index> indices;
-             std::vector<Sign> signs;
-             for (Index e = 0; e < f.count(k); ++e) {
-               const auto r = f.coboundary_row(k, e);
-               indices.insert(indices.end(), r.indices, r.indices + r.size);
-               signs.insert(signs.end(), r.signs, r.signs + r.size);
-               offsets.push_back(static_cast<Index>(indices.size()));
-             }
-             return csr_copy(offsets, indices, signs);
+            std::vector<Index> offsets{0};
+            std::vector<Index> indices;
+            std::vector<Sign> signs;
+            for (Index e = 0; e < f.count(k); ++e) {
+              const auto r = f.coboundary_row(k, e);
+              indices.insert(indices.end(), r.indices, r.indices + r.size);
+              signs.insert(signs.end(), r.signs, r.signs + r.size);
+              offsets.push_back(static_cast<Index>(indices.size()));
+            }
+            return csr_copy(offsets, indices, signs);
 #else
-             const CsrView v = f.coboundary_view(k);
-             const py::ssize_t n = f.count(k);
-             const py::ssize_t nnz = v.offsets[static_cast<std::size_t>(n)];
-             return py::make_tuple(
-                 py::array_t<Index>({n + 1}, {sizeof(Index)}, v.offsets, self_obj),
-                 py::array_t<Index>({nnz}, {sizeof(Index)}, v.indices, self_obj),
-                 py::array_t<Sign>({nnz}, {sizeof(Sign)}, v.signs, self_obj));
+            const CsrView v = f.coboundary_view(k);
+            const py::ssize_t n = f.count(k);
+            const py::ssize_t nnz = v.offsets[static_cast<std::size_t>(n)];
+            return py::make_tuple(py::array_t<Index>({n + 1}, {sizeof(Index)}, v.offsets, self_obj),
+                                  py::array_t<Index>({nnz}, {sizeof(Index)}, v.indices, self_obj),
+                                  py::array_t<Sign>({nnz}, {sizeof(Sign)}, v.signs, self_obj));
 #endif
-           },
-           py::arg("k"), "CSR (offsets, indices, signs) of δ_k — zero-copy views")
+          },
+          py::arg("k"), "CSR (offsets, indices, signs) of δ_k — zero-copy views")
       .def("star", &FrozenComplex::star, py::arg("k"), py::arg("cell"))
       .def("closure", &FrozenComplex::closure, py::arg("k"), py::arg("cell"))
       .def("link", &FrozenComplex::link, py::arg("k"), py::arg("cell"));
@@ -222,20 +228,22 @@ PYBIND11_MODULE(_core, m) {
   py::class_<DualView>(m, "DualView")
       .def_property_readonly("dim", &DualView::dim)
       .def("count", &DualView::count, py::arg("k"))
-      .def("boundary_row",
-           [](const DualView& d, int k, Index cell) {
-             const auto r = d.boundary_row(k, cell);
-             return py::make_tuple(
-                 copy_array(std::vector<Index>(r.indices, r.indices + r.size)),
-                 copy_array(std::vector<Sign>(r.signs, r.signs + r.size)));
-           },
-           py::arg("k"), py::arg("cell"))
-      .def("coboundary_row", [](const DualView& d, int k, Index cell) {
-        const auto r = d.coboundary_row(k, cell);
-        return py::make_tuple(copy_array(std::vector<Index>(r.indices, r.indices + r.size)),
-                              copy_array(std::vector<Sign>(r.signs, r.signs + r.size)));
-      },
-           py::arg("k"), py::arg("cell"));
+      .def(
+          "boundary_row",
+          [](const DualView& d, int k, Index cell) {
+            const auto r = d.boundary_row(k, cell);
+            return py::make_tuple(copy_array(std::vector<Index>(r.indices, r.indices + r.size)),
+                                  copy_array(std::vector<Sign>(r.signs, r.signs + r.size)));
+          },
+          py::arg("k"), py::arg("cell"))
+      .def(
+          "coboundary_row",
+          [](const DualView& d, int k, Index cell) {
+            const auto r = d.coboundary_row(k, cell);
+            return py::make_tuple(copy_array(std::vector<Index>(r.indices, r.indices + r.size)),
+                                  copy_array(std::vector<Sign>(r.signs, r.signs + r.size)));
+          },
+          py::arg("k"), py::arg("cell"));
   m.def("dual", &dual, py::keep_alive<0, 1>(), py::arg("frozen"));
 
   // ---- operations -----------------------------------------------------
@@ -248,33 +256,36 @@ PYBIND11_MODULE(_core, m) {
   py::class_<QuotientResult>(m, "QuotientResult")
       .def_readonly("complex", &QuotientResult::complex)
       .def_readonly("map", &QuotientResult::map);
-  m.def("quotient",
-        [](const Complex& c, py::sequence by_dim) { return quotient(c, to_idents_by_dim(by_dim)); },
-        py::arg("complex"), py::arg("identifications"));
-  m.def("find_parallel_cells",
-        [](const Complex& c, int k) { return idents_to_py(find_parallel_cells(c, k)); },
-        py::arg("complex"), py::arg("k"));
+  m.def(
+      "quotient",
+      [](const Complex& c, py::sequence by_dim) { return quotient(c, to_idents_by_dim(by_dim)); },
+      py::arg("complex"), py::arg("identifications"));
+  m.def(
+      "find_parallel_cells",
+      [](const Complex& c, int k) { return idents_to_py(find_parallel_cells(c, k)); },
+      py::arg("complex"), py::arg("k"));
 
   py::class_<PushoutResult>(m, "PushoutResult")
       .def_readonly("complex", &PushoutResult::complex)
       .def_readonly("a_map", &PushoutResult::a_map)
       .def_readonly("b_map", &PushoutResult::b_map);
-  m.def("pushout",
-        [](const Complex& a, const Complex& b, py::sequence glue, bool dedup) {
-          return pushout(a, b, to_idents(glue), dedup);
-        },
-        py::arg("a"), py::arg("b"), py::arg("vertex_identifications"),
-        py::arg("deduplicate") = true);
+  m.def(
+      "pushout",
+      [](const Complex& a, const Complex& b, py::sequence glue, bool dedup) {
+        return pushout(a, b, to_idents(glue), dedup);
+      },
+      py::arg("a"), py::arg("b"), py::arg("vertex_identifications"), py::arg("deduplicate") = true);
 
-  m.def("lift_identifications",
-        [](const Complex& c, py::sequence pairs) {
-          py::list out;
-          for (const auto& level : lift_identifications(c, to_idents(pairs))) {
-            out.append(idents_to_py(level));
-          }
-          return out;
-        },
-        py::arg("complex"), py::arg("vertex_pairs"));
+  m.def(
+      "lift_identifications",
+      [](const Complex& c, py::sequence pairs) {
+        py::list out;
+        for (const auto& level : lift_identifications(c, to_idents(pairs))) {
+          out.append(idents_to_py(level));
+        }
+        return out;
+      },
+      py::arg("complex"), py::arg("vertex_pairs"));
 
   py::class_<ProductResult>(m, "ProductResult")
       .def_readonly("complex", &ProductResult::complex)
@@ -317,11 +328,12 @@ PYBIND11_MODULE(_core, m) {
       .def_readonly("complex", &ReplaceResult::complex)
       .def_readonly("map", &ReplaceResult::map)
       .def_readonly("patch_map", &ReplaceResult::patch_map);
-  m.def("replace",
-        [](const Complex& c, const Marker& region, const Complex& patch, py::sequence glue) {
-          return replace(c, region, patch, to_idents(glue));
-        },
-        py::arg("complex"), py::arg("region"), py::arg("patch"), py::arg("vertex_glue"));
+  m.def(
+      "replace",
+      [](const Complex& c, const Marker& region, const Complex& patch, py::sequence glue) {
+        return replace(c, region, patch, to_idents(glue));
+      },
+      py::arg("complex"), py::arg("region"), py::arg("patch"), py::arg("vertex_glue"));
 
   py::class_<OrientationResult>(m, "OrientationResult")
       .def_readonly("complex", &OrientationResult::complex)
@@ -337,12 +349,13 @@ PYBIND11_MODULE(_core, m) {
   py::class_<CoarsenResult>(m, "CoarsenResult")
       .def_readonly("complex", &CoarsenResult::complex)
       .def_readonly("map", &CoarsenResult::map);
-  m.def("coarsen",
-        [](const Complex& c, const std::vector<Index>& labels, py::object protected_cells) {
-          if (protected_cells.is_none()) return coarsen(c, labels);
-          return coarsen(c, labels, protected_cells.cast<const Marker&>());
-        },
-        py::arg("complex"), py::arg("labels"), py::arg("protected_cells") = py::none());
+  m.def(
+      "coarsen",
+      [](const Complex& c, const std::vector<Index>& labels, py::object protected_cells) {
+        if (protected_cells.is_none()) return coarsen(c, labels);
+        return coarsen(c, labels, protected_cells.cast<const Marker&>());
+      },
+      py::arg("complex"), py::arg("labels"), py::arg("protected_cells") = py::none());
 
   py::class_<CollapseResult>(m, "CollapseResult")
       .def_readonly("complex", &CollapseResult::complex)
@@ -355,24 +368,27 @@ PYBIND11_MODULE(_core, m) {
       .def_readonly("complex", &SubdivisionResult::complex)
       .def_property_readonly("vertex_offset",
                              [](const SubdivisionResult& r) { return copy_array(r.vertex_offset); })
-      .def("carrier_dim",
-           [](const SubdivisionResult& r, std::size_t k) {
-             check_dim(k, r.carrier_dim.size(), "carrier_dim");
-             return copy_array(std::vector<Index>(r.carrier_dim[k].begin(), r.carrier_dim[k].end()));
-           },
-           py::arg("k"))
-      .def("carrier_index",
-           [](const SubdivisionResult& r, std::size_t k) {
-             check_dim(k, r.carrier_index.size(), "carrier_index");
-             return copy_array(r.carrier_index[k]);
-           },
-           py::arg("k"))
-      .def("carrier_sign",
-           [](const SubdivisionResult& r, std::size_t k) {
-             check_dim(k, r.carrier_sign.size(), "carrier_sign");
-             return copy_array(r.carrier_sign[k]);
-           },
-           py::arg("k"));
+      .def(
+          "carrier_dim",
+          [](const SubdivisionResult& r, std::size_t k) {
+            check_dim(k, r.carrier_dim.size(), "carrier_dim");
+            return copy_array(std::vector<Index>(r.carrier_dim[k].begin(), r.carrier_dim[k].end()));
+          },
+          py::arg("k"))
+      .def(
+          "carrier_index",
+          [](const SubdivisionResult& r, std::size_t k) {
+            check_dim(k, r.carrier_index.size(), "carrier_index");
+            return copy_array(r.carrier_index[k]);
+          },
+          py::arg("k"))
+      .def(
+          "carrier_sign",
+          [](const SubdivisionResult& r, std::size_t k) {
+            check_dim(k, r.carrier_sign.size(), "carrier_sign");
+            return copy_array(r.carrier_sign[k]);
+          },
+          py::arg("k"));
   m.def("barycentric_subdivision", &barycentric_subdivision, py::arg("complex"));
 
   // ---- queries --------------------------------------------------------
@@ -407,12 +423,13 @@ PYBIND11_MODULE(_core, m) {
       .def_property_readonly("label", [](const ComponentLabels& r) { return copy_array(r.label); })
       .def_readonly("count", &ComponentLabels::count);
   py::class_<ComplexComponents>(m, "ComplexComponents")
-      .def("label",
-           [](const ComplexComponents& r, std::size_t k) {
-             check_dim(k, r.label.size(), "label");
-             return copy_array(r.label[k]);
-           },
-           py::arg("k"))
+      .def(
+          "label",
+          [](const ComplexComponents& r, std::size_t k) {
+            check_dim(k, r.label.size(), "label");
+            return copy_array(r.label[k]);
+          },
+          py::arg("k"))
       .def_readonly("count", &ComplexComponents::count);
   m.def("connected_components", py::overload_cast<const Complex&>(&connected_components),
         py::arg("complex"));
@@ -435,8 +452,8 @@ PYBIND11_MODULE(_core, m) {
       .def_readonly("acyclic", &CommonBoundary::acyclic);
   m.def("common_boundary", &common_boundary, py::arg("complex"), py::arg("k"), py::arg("a"),
         py::arg("b"));
-  m.def("excess_intersection", &excess_intersection, py::arg("complex"), py::arg("k"),
-        py::arg("a"), py::arg("b"));
-  m.def("amalgamates_to_cell", &amalgamates_to_cell, py::arg("complex"), py::arg("k"),
-        py::arg("a"), py::arg("b"));
+  m.def("excess_intersection", &excess_intersection, py::arg("complex"), py::arg("k"), py::arg("a"),
+        py::arg("b"));
+  m.def("amalgamates_to_cell", &amalgamates_to_cell, py::arg("complex"), py::arg("k"), py::arg("a"),
+        py::arg("b"));
 }

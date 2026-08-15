@@ -35,9 +35,9 @@ inline int run_all() {
 
 }  // namespace graphos_test
 
-#define GRAPHOS_TEST(name)                                          \
-  static void name();                                               \
-  static ::graphos_test::Registrar name##_registrar{#name, &name};  \
+#define GRAPHOS_TEST(name)                                         \
+  static void name();                                              \
+  static ::graphos_test::Registrar name##_registrar{#name, &name}; \
   static void name()
 
 #define CHECK(cond)                                                 \
@@ -48,15 +48,15 @@ inline int run_all() {
     }                                                               \
   } while (0)
 
-#define CHECK_THROWS(expr)                                          \
-  do {                                                              \
-    bool graphos_test_threw = false;                                \
-    try {                                                           \
-      (void)(expr);                                                 \
-    } catch (...) {                                                 \
-      graphos_test_threw = true;                                    \
-    }                                                               \
-    CHECK(graphos_test_threw);                                      \
+#define CHECK_THROWS(expr)           \
+  do {                               \
+    bool graphos_test_threw = false; \
+    try {                            \
+      (void)(expr);                  \
+    } catch (...) {                  \
+      graphos_test_threw = true;     \
+    }                                \
+    CHECK(graphos_test_threw);       \
   } while (0)
 
 #define GRAPHOS_TEST_MAIN() \

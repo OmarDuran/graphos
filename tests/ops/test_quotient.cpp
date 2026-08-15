@@ -1,6 +1,5 @@
-#include "graphos/ops/quotient.hpp"
-
 #include "fixtures.hpp"
+#include "graphos/ops/quotient.hpp"
 #include "graphos_test.hpp"
 
 GRAPHOS_TEST(identification_chains_resolve_to_root) {

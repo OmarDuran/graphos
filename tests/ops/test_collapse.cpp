@@ -1,10 +1,8 @@
+#include "fixtures.hpp"
 #include "graphos/ops/collapse.hpp"
-
-#include "graphos/queries/homology.hpp"
 #include "graphos/ops/lift_identifications.hpp"
 #include "graphos/ops/quotient.hpp"
-
-#include "fixtures.hpp"
+#include "graphos/queries/homology.hpp"
 #include "graphos_test.hpp"
 
 using graphos::Index;

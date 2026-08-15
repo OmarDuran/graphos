@@ -1,6 +1,5 @@
-#include "graphos/core/marker.hpp"
-
 #include "fixtures.hpp"
+#include "graphos/core/marker.hpp"
 #include "graphos_test.hpp"
 
 using graphos::Index;

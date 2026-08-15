@@ -1,6 +1,5 @@
-#include "graphos/core/complex.hpp"
-
 #include "fixtures.hpp"
+#include "graphos/core/complex.hpp"
 #include "graphos_test.hpp"
 
 GRAPHOS_TEST(triangle_invariants) {
@@ -36,7 +35,7 @@ GRAPHOS_TEST(d_squared_detects_broken_orientation) {
   c.attach_cell(1, {2, 0}, {-1, +1});
   // e0 + e1 - e2 does not close: ∂∂ = 2v2 - 2v0 != 0
   c.attach_cell(2, {0, 1, 2}, {+1, +1, -1});
-  c.validate();  // structurally fine...
+  c.validate();                           // structurally fine...
   CHECK(!graphos::d_squared_is_zero(c));  // ...but not a chain complex
 }
 

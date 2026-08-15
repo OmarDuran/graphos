@@ -88,7 +88,8 @@ inline AgglomerationResult agglomerate(const Complex& c, const std::vector<Index
   for (int k = 0; k < n; ++k) {
     const CoboundaryOperator cob = coboundary(c, k);
     for (Index i = 0; i < c.count(k); ++i) {
-      if (cob.offsets[static_cast<std::size_t>(i) + 1] == cob.offsets[static_cast<std::size_t>(i)]) {
+      if (cob.offsets[static_cast<std::size_t>(i) + 1] ==
+          cob.offsets[static_cast<std::size_t>(i)]) {
         keep[static_cast<std::size_t>(k)][static_cast<std::size_t>(i)] = 1;  // maximal lower cell
       }
     }

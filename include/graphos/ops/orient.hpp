@@ -65,7 +65,8 @@ inline Complex flip_cells(const Complex& c, int k, const std::vector<Index>& cel
   if (k < n) {
     BoundaryOperator& up = strata[static_cast<std::size_t>(k) + 1];
     for (std::size_t m = 0; m < up.indices.size(); ++m) {
-      if (turned[static_cast<std::size_t>(up.indices[m])]) up.signs[m] = static_cast<Sign>(-up.signs[m]);
+      if (turned[static_cast<std::size_t>(up.indices[m])])
+        up.signs[m] = static_cast<Sign>(-up.signs[m]);
     }
   }
   return Complex(c.counts(), std::move(strata));
@@ -154,7 +155,8 @@ inline OrientationResult orient(const Complex& c, int k) {
   for (Index f = 0; f < c.count(k - 1); ++f) {
     const std::vector<Index>& up = upper[static_cast<std::size_t>(f)];
     if (up.size() != 2) continue;
-    if (!maximal[static_cast<std::size_t>(up[0])] || !maximal[static_cast<std::size_t>(up[1])]) continue;
+    if (!maximal[static_cast<std::size_t>(up[0])] || !maximal[static_cast<std::size_t>(up[1])])
+      continue;
     const Index e1 = up[0];
     const Index e2 = up[1];
     if (e1 == e2) {
@@ -185,8 +187,8 @@ inline OrientationResult orient(const Complex& c, int k) {
       queue.pop();
       for (const Arc& arc : adj[static_cast<std::size_t>(cur)]) {
         // opposite induced signs: flip_cur * s_own = -(flip_nb * s_nb)
-        const Sign required = static_cast<Sign>(-flip[static_cast<std::size_t>(cur)] *
-                                                arc.s_own * arc.s_nb);
+        const Sign required =
+            static_cast<Sign>(-flip[static_cast<std::size_t>(cur)] * arc.s_own * arc.s_nb);
         Sign& nb = flip[static_cast<std::size_t>(arc.nb)];
         if (nb == 0) {
           nb = required;
