@@ -11,8 +11,8 @@
 
 namespace graphos {
 
-// Signed CSR incidence in persistent device-capable storage (exec::Array,
-// the CHAI seam), plus the POD view kernels capture by value.
+// Signed CSR incidence in device-capable storage (exec::Array, the CHAI
+// seam), with the POD view kernels capture by value.
 struct FrozenCsr {
   exec::Array<Index> offsets;
   exec::Array<Index> indices;
@@ -25,24 +25,18 @@ struct CsrView {
   exec::Array<Sign>::view_type signs;
 };
 
-// The frozen half of the builder/frozen split. A Complex is the mutable
-// host-side builder (attach_cell, and the ops that assemble new complexes);
-// freezing it yields an immutable FrozenComplex whose boundary operators ∂_k
-// AND derived signed coboundary operators δ_k live in device-capable arrays.
-// This is the object queries, device kernels, and the NetworkX views sit on:
-// its immutability is what makes zero-copy views and CHAI's copy-on-capture
-// semantics sound.
+// The immutable half of the builder/frozen split: Complex is the mutable
+// builder, freezing yields a FrozenComplex carrying ∂_k and the derived δ_k
+// in device-capable arrays. Queries, kernels and the NetworkX views sit on
+// it; immutability is what makes zero-copy views sound.
 //
-// Topology-changing operations produce new complexes (via the builder path),
-// which are then frozen again — freezing is the epoch boundary of the
-// frozen-complexes/bulk-edits model.
+// Operations build new complexes and freeze them again, so freezing is the
+// epoch boundary of the bulk-edit model.
 class FrozenComplex {
  public:
-  // Collective. Under distribution, freezing is where partitioning
-  // (ParMETIS), ownership assignment, and halo construction happen;
-  // halo_depth sets the ghost-ring depth that Local queries (star, closure,
-  // link) can answer correctly. P=1 today: the whole complex is the local
-  // partition and halo_depth is recorded but has no effect.
+  // Under distribution, freezing is where partitioning, ownership and halo
+  // construction happen; halo_depth bounds the neighbourhood st/cl/lk can
+  // answer. At P = 1 the partition is the whole complex and it has no effect.
   explicit FrozenComplex(const Complex& c, int halo_depth = 1)
       : dim_(c.dim()),
         halo_depth_(halo_depth),
@@ -69,8 +63,8 @@ class FrozenComplex {
     }
   }
 
-  // frozen storage is move-only (exec::Array owns device-capable memory);
-  // stating it explicitly keeps type traits honest for bindings
+  // move-only: exec::Array owns device-capable memory. Stated explicitly so
+  // type traits stay honest for the bindings.
   FrozenComplex(const FrozenComplex&) = delete;
   FrozenComplex& operator=(const FrozenComplex&) = delete;
   FrozenComplex(FrozenComplex&&) = default;
@@ -80,15 +74,14 @@ class FrozenComplex {
 
   int halo_depth() const { return halo_depth_; }
 
-  // The GLOBAL number of k-cells: a collective value, identical on every
-  // rank (P=1: trivially the local count).
+  // N_k, global and rank-invariant (P = 1: the local count).
   Index count(int k) const {
     return (k >= 0 && k <= dim_) ? counts_[static_cast<std::size_t>(k)] : Index{0};
   }
 
   std::vector<Index> counts() const { return counts_; }
 
-  // host-side row access into ∂_k / δ_k
+  // host-side rows of ∂_k and δ_k
   struct Row {
     const Index* indices;
     const Sign* signs;
@@ -105,7 +98,7 @@ class FrozenComplex {
     return row(coboundary_[static_cast<std::size_t>(k)], cell);
   }
 
-  // kernel-facing views (capture the CsrView by value in RAJA lambdas)
+  // kernel-facing views: capture CsrView by value in RAJA lambdas
   CsrView boundary_view(int k) {
     if (k < 1 || k > dim_) throw std::invalid_argument("boundary_view: dimension out of range");
     FrozenCsr& m = boundary_[static_cast<std::size_t>(k)];
@@ -118,14 +111,13 @@ class FrozenComplex {
     return CsrView{m.offsets.view(), m.indices.view(), m.signs.view()};
   }
 
-  // --- combinatorial topology queries -------------------------------------
-  // Results are per-dimension sorted cell lists, sized dim()+1.
+  // --- closure, star, link -------------------------------------------------
+  // Results are per-stratum sorted cell lists, sized dim()+1.
   //
-  // Local: evaluated on the local partition plus its ghost ring, correct
-  // when the queried neighborhood lies within freeze()'s halo_depth. No
-  // communication is implied; call freely with different arguments per rank.
+  // Local: evaluated on the partition plus its ghost ring, correct when the
+  // neighbourhood lies within freeze()'s halo_depth. No communication.
 
-  // cl(σ): σ and all its faces, recursively.
+  // cl(σ): σ with all its faces, transitively.
   std::vector<std::vector<Index>> closure(int k, Index cell) const {
     check_cell(k, cell, 0, dim_);
     std::vector<std::set<Index>> acc(static_cast<std::size_t>(dim_) + 1);
@@ -133,7 +125,7 @@ class FrozenComplex {
     return to_lists(acc);
   }
 
-  // st(σ): σ and all cells having σ as a face.
+  // st(σ): σ with all its cofaces, transitively.
   std::vector<std::vector<Index>> star(int k, Index cell) const {
     check_cell(k, cell, 0, dim_);
     std::vector<std::set<Index>> acc(static_cast<std::size_t>(dim_) + 1);
@@ -141,8 +133,8 @@ class FrozenComplex {
     return to_lists(acc);
   }
 
-  // lk(σ) = cl(st(σ)) \ st(cl(σ)): the boundary of a neighborhood of σ,
-  // e.g. the link of an interior vertex of a 2-complex is a cycle.
+  // lk(σ) = cl(st(σ)) \ st(cl(σ)). The link of an interior vertex of a
+  // 2-manifold complex is a cycle.
   std::vector<std::vector<Index>> link(int k, Index cell) const {
     check_cell(k, cell, 0, dim_);
     std::vector<std::set<Index>> st(static_cast<std::size_t>(dim_) + 1);
@@ -212,21 +204,18 @@ inline FrozenComplex freeze(const Complex& c, int halo_depth = 1) {
   return FrozenComplex(c, halo_depth);
 }
 
-// The combinatorial dual: the face poset with its order reversed. The dual
-// k-cell IS the primal (n−k)-cell — same index — and the dual boundary
-// operator is the primal coboundary of the mirrored dimension, so the view
-// is zero-copy over the frozen storage. This is the combinatorial half of
-// the DEC dual mesh: exokalk realizes dual cells geometrically (via the
-// barycentric subdivision) and puts measures on them; the discrete Hodge
-// star maps primal k-cochains to cochains on dual (n−k)-cells.
+// The face poset with its order reversed. The dual k-cell is the primal
+// (n−k)-cell — the same index — and ∂^dual_k = δ_{n−k}, so the view is
+// zero-copy. This is the combinatorial half of the DEC dual mesh: the metric
+// layer realizes dual cells (by barycentric subdivision), puts measures on
+// them, and the discrete Hodge star maps primal k-cochains to dual
+// (n−k)-cochains.
 //
-// Signs are the raw transpose coefficients; DEC sign conventions that
-// insert (−1)^{k(n−k)}-type factors are the metric layer's decision, not
-// stored here. Near ∂Ω the dual of a boundary cell is combinatorially
-// truncated (its "missing" boundary faces are the standard DEC boundary
-// treatment, again a metric-layer concern).
+// Signs are the transpose coefficients. DEC conventions inserting
+// (−1)^{k(n−k)} factors belong to the metric layer, as does the truncation of
+// the dual of a boundary cell.
 //
-// Local (a view; no communication implied).
+// A view; no communication implied.
 class DualView {
  public:
   explicit DualView(const FrozenComplex& f) : f_(&f) {}
@@ -235,8 +224,7 @@ class DualView {
 
   Index count(int k) const { return f_->count(f_->dim() - k); }
 
-  // ∂^dual_k = δ_{n−k}: faces of a dual k-cell are the dual (k−1)-cells of
-  // the primal cofaces of its primal (n−k)-cell
+  // ∂^dual_k = δ_{n−k}
   FrozenComplex::Row boundary_row(int k, Index cell) const {
     return f_->coboundary_row(f_->dim() - k, cell);
   }

@@ -13,14 +13,13 @@ namespace graphos {
 struct JoinResult {
   Complex complex;
 
-  // Both factors embed as subcomplexes of the join; these are the
-  // embeddings (all signs +1).
+  // The embeddings A ↪ A ∗ B and B ↪ A ∗ B (all signs +1).
   ChainMap a_map;
   ChainMap b_map;
 
-  // Join cells of dimension k: A's k-cells first, then B's k-cells, then
-  // pair blocks (α, β) with dim α + dim β + 1 = k, ascending in p = dim α,
-  // i-major: index = offset + i * b_count + j. Empty blocks omitted.
+  // Stratum k: A's k-cells, then B's, then pair blocks (α, β) with
+  // dim α + dim β + 1 = k, ascending in p = dim α, i-major. Empty blocks
+  // omitted.
   struct Block {
     int p;
     int q;
@@ -31,15 +30,12 @@ struct JoinResult {
   std::vector<std::vector<Block>> pair_blocks;
 };
 
-// The join A ∗ B: every cell of A, every cell of B, and one cell α∗β of
-// dimension dim α + dim β + 1 for every pair, with the boundary
-//   ∂(α∗β) = ∂α∗β + (−1)^{dim α + 1} α∗∂β,
-// where ∂(vertex)∗β degenerates to β itself (and symmetrically). This is
-// the constructor of the PL toolkit: join(point, X) is the CONE over X,
-// join(S⁰, X) the SUSPENSION, and the regular-neighborhood factorization
-// cl(st σ) ≅ σ ∗ lk(σ) becomes computable on both sides.
-//
-// Collective. P=1 today.
+// A ∗ B: the cells of A, those of B, and one cell α ∗ β of dimension
+// dim α + dim β + 1 per pair, with
+//   ∂(α ∗ β) = ∂α ∗ β + (−1)^{dim α + 1} α ∗ ∂β,
+// where ∂(vertex) ∗ β degenerates to β, and symmetrically. join(point, X) is
+// the cone on X, join(S⁰, X) the suspension, and the regular-neighbourhood
+// factorization cl(st σ) ≅ σ ∗ lk(σ) becomes computable on both sides.
 inline JoinResult join(const Complex& a, const Complex& b) {
   const int dim = a.dim() + b.dim() + 1;
 
@@ -73,7 +69,7 @@ inline JoinResult join(const Complex& a, const Complex& b) {
   std::vector<Index> row_idx;
   std::vector<Sign> row_sg;
   for (int k = 1; k <= dim; ++k) {
-    // A's cells, verbatim (A occupies the leading indices of every stratum)
+    // A's cells verbatim: A holds the leading indices of every stratum
     if (k <= a.dim()) {
       const BoundaryOperator& bnd = a.boundary(k);
       for (Index e = 0; e < a.count(k); ++e) {
@@ -111,7 +107,7 @@ inline JoinResult join(const Complex& a, const Complex& b) {
               row_sg.push_back(ba.signs[m]);
             }
           } else {
-            // ∂(vertex)∗β degenerates to β itself
+            // ∂(vertex) ∗ β degenerates to β
             row_idx.push_back(a.count(k - 1) + j);
             row_sg.push_back(Sign{1});
           }
@@ -124,7 +120,7 @@ inline JoinResult join(const Complex& a, const Complex& b) {
               row_sg.push_back(static_cast<Sign>(flip * bb.signs[m]));
             }
           } else {
-            // α∗∂(vertex) degenerates to α itself
+            // α ∗ ∂(vertex) degenerates to α
             row_idx.push_back(i);
             row_sg.push_back(flip);
           }

@@ -10,13 +10,12 @@
 
 namespace graphos::exec {
 
-// Scratch buffer for kernel phases. With Umpire enabled, storage comes from
-// the shared memory pools ("HOST" today; unified/device pools once kernels
-// run on device). The fallback is plain heap memory behind the same
-// interface, so op code has exactly one code path.
+// Kernel scratch. Under Umpire the storage comes from the shared pools; the
+// fallback is heap memory behind the same interface, so operation code has
+// one path.
 //
-// T must be trivially constructible/destructible (index and flag types):
-// pool allocations are raw bytes.
+// T must be trivially constructible and destructible: pool allocations are
+// raw bytes.
 template <typename T>
 class Buffer {
  public:

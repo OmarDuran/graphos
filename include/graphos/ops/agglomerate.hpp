@@ -11,32 +11,24 @@
 namespace graphos {
 
 struct AgglomerationResult {
-  // Polytopal: one coarse top cell per aggregate, its boundary the signed
-  // sum of its members' boundaries (interior facets cancel); the surviving
-  // lower skeleton is the closure of the inter-aggregate interfaces, the
-  // domain boundary, and the maximal lower-dimensional cells.
+  // One coarse top cell per aggregate, its boundary Σ ∂(members) with
+  // interior facets cancelling. The surviving lower strata are the closure of
+  // the interfaces, ∂K, and the maximal lower-dimensional cells.
   Complex complex;
-  // fine -> coarse: top cells map to their aggregate; interior lower cells
-  // (interior to an aggregate) are sent to zero. Restriction/prolongation for
-  // multilevel methods keys off this.
+  // fine → coarse: a top cell maps to its aggregate, a cell interior to an
+  // aggregate to 0. Restriction and prolongation key off this.
   ChainMap map;
 };
 
-// Agglomeration/coarsening: merge the top cells into aggregates given by
-// `labels` (one label in [0, n_aggregates) per top cell — typically from a
-// partitioner or connected_components). The inverse direction of
-// refinement, and the constructor of polytopal coarse spaces for
-// multigrid/multiscale methods.
+// Merges the top cells into the aggregates named by `labels`, one label in
+// [0, n_aggregates) per top cell. The direction opposite refinement, and the
+// constructor of polytopal coarse spaces.
 //
-// The coarse boundary of an aggregate is Σ ∂(members): facets interior to
-// an aggregate cancel exactly when the complex is consistently oriented,
-// so inconsistent orientation is DETECTED (a facet with coefficient ±2)
-// and reported as an error — run orient() first. Aggregates should be
-// facet-connected (build labels with connected_components); a disconnected
-// aggregate still produces a valid chain but not a cell-like one.
-//
-// Logically collective: labels are supplied per-rank for locally owned top
-// cells. P=1 today.
+// The coarse boundary is Σ ∂(members). Interior facets cancel exactly when
+// the complex is coherently oriented, so an incoherent one is detected — a
+// facet with coefficient ±2 — and reported; run orient() first. Aggregates
+// should be facet-connected; a disconnected one yields a valid chain but not
+// a cell-like one.
 inline AgglomerationResult agglomerate(const Complex& c, const std::vector<Index>& labels) {
   const int n = c.dim();
   if (n < 1) throw std::invalid_argument("agglomerate: complex must have dimension >= 1");
@@ -54,7 +46,7 @@ inline AgglomerationResult agglomerate(const Complex& c, const std::vector<Index
     if (!u) throw std::invalid_argument("agglomerate: aggregate ids must be contiguous");
   }
 
-  // coarse top boundaries: signed facet sums per aggregate
+  // coarse top boundaries: the signed facet sum per aggregate
   const BoundaryOperator& bnd = c.boundary(n);
   std::vector<std::map<Index, int>> acc(static_cast<std::size_t>(n_agg));
   for (Index e = 0; e < c.count(n); ++e) {
@@ -74,8 +66,8 @@ inline AgglomerationResult agglomerate(const Complex& c, const std::vector<Index
     }
   }
 
-  // survivors below the top: closure of {facets with nonzero coefficient}
-  // and {maximal lower-dimensional cells}
+  // survivors below the top: cl({facets with nonzero coefficient} ∪ {maximal
+  // lower-dimensional cells})
   std::vector<std::vector<char>> keep(static_cast<std::size_t>(n));
   for (int k = 0; k < n; ++k) {
     keep[static_cast<std::size_t>(k)].assign(static_cast<std::size_t>(c.count(k)), 0);
@@ -104,7 +96,7 @@ inline AgglomerationResult agglomerate(const Complex& c, const std::vector<Index
     }
   }
 
-  // compact + chain map
+  // compact, and record the chain map
   ChainMap map = ChainMap::sized(c.counts());
   std::vector<Index> coarse_counts(static_cast<std::size_t>(n) + 1, 0);
   for (int k = 0; k < n; ++k) {

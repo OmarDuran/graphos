@@ -31,6 +31,34 @@ env:
   TPL_PREFIX: ${{ github.workspace }}/tpl
 
 jobs:
+  # ---- formatting, checked and never fixed ----------------------------------
+  #
+  # `--dry-run --Werror` fails the run and names the file; it does not rewrite
+  # anything. A job that auto-commits formatting fights every rebase and puts a
+  # bot in the blame for lines it did not write, so the author runs the
+  # formatter and the check only says whether they did.
+  #
+  # THE VERSION IS PINNED. clang-format's output changes between major
+  # versions, so an unpinned formatter turns into a CI failure on the day the
+  # runner image bumps -- a red build nobody caused and no diff explains.
+  format:
+    name: 0. format
+    runs-on: ubuntu-latest
+    env:
+      CLANG_FORMAT_VERSION: "21"
+    steps:
+      - uses: actions/checkout@v4
+      - name: install clang-format
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang-format-$CLANG_FORMAT_VERSION
+      - name: check
+        run: |
+          mapfile -t files < <(find include tests apps bench python \
+            \( -name '*.hpp' -o -name '*.cpp' \) 2>/dev/null | grep -vE 'build|_deps')
+          echo "checking ${#files[@]} files against .clang-format"
+          clang-format-$CLANG_FORMAT_VERSION --dry-run --Werror "${files[@]}"
+
   # ---- the dependency-free path, which must never be slow -------------------
   #
   # graphos installs with no third-party libraries at all, and that path is

@@ -8,16 +8,13 @@
 
 namespace graphos {
 
-// A collective selection of cells — the argument form for every
-// topology-changing operation that acts on a chosen set of cells.
+// A selection of cells: the argument form of every operation that acts on a
+// chosen subcomplex.
 //
-// Distribution contract: a Marker is a LOCAL object with COLLECTIVE meaning.
-// Each rank marks cells of its own partition (mark() takes local indices,
-// predicates evaluate locally); the union across ranks is the logical
-// selection. Under P=1 — the current implementation — the local partition is
-// the whole complex. Because selection is expressed by marking rather than
-// by naming global index lists, the same program text is meaningful at any
-// rank count.
+// A Marker is local data with collective meaning. Each rank marks cells of its
+// own partition and the union across ranks is the selection; at P = 1 the
+// partition is the whole complex. Selection by predicate rather than by global
+// index list is what makes the same program text rank-independent.
 class Marker {
  public:
   explicit Marker(const Complex& c) : counts_(c.counts()) {
@@ -35,9 +32,8 @@ class Marker {
     return *this;
   }
 
-  // Marks every local k-cell satisfying pred(index). This is the
-  // distribution-stable selection form: the predicate runs on each rank
-  // over its own cells.
+  // Marks every local k-cell satisfying pred. Rank-independent: the predicate
+  // runs on each rank over its own cells.
   template <typename Pred>
   Marker& mark_where(int k, Pred&& pred) {
     if (k < 0 || k > dim()) throw std::invalid_argument("Marker: dimension out of range");
@@ -52,7 +48,7 @@ class Marker {
     return flags_[static_cast<std::size_t>(k)][static_cast<std::size_t>(cell)] != 0;
   }
 
-  // number of locally marked k-cells
+  // locally marked k-cells
   Index marked_count(int k) const {
     if (k < 0 || k > dim()) throw std::invalid_argument("Marker: dimension out of range");
     Index n = 0;
@@ -65,7 +61,7 @@ class Marker {
     return flags_[static_cast<std::size_t>(k)];
   }
 
-  // Ops call this to guarantee the marker was built for the complex at hand.
+  // Guards that the marker was built against the complex being operated on.
   void validate_for(const Complex& c) const {
     if (counts_ != c.counts()) {
       throw std::invalid_argument("Marker: built for a different complex (cell counts differ)");

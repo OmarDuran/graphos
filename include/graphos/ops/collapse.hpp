@@ -10,21 +10,18 @@
 
 namespace graphos {
 
-// Marks every free face: a cell τ with exactly one proper coface σ, in
-// whose boundary τ appears exactly ONCE (a τ glued into σ twice — e.g. the
-// vertex of a loop edge — is not free: removing it would not be a
-// collapse). A free pair (τ, σ) is the site of an elementary (Whitehead)
-// collapse — star_deletion at τ removes exactly {τ, σ} and is a simple
-// homotopy equivalence.
-//
-// Collective. P=1 today.
+// Marks the free faces: τ with exactly one proper coface σ, appearing in ∂σ
+// exactly once. A τ glued into σ twice — the vertex of a loop edge — is not
+// free. A free pair (τ, σ) is the site of an elementary Whitehead collapse:
+// star_deletion at τ removes exactly {τ, σ} and is a simple homotopy
+// equivalence.
 inline Marker free_faces(const Complex& c) {
   Marker out(c);
   const int dim = c.dim();
   for (int k = 0; k < dim; ++k) {
-    // direct cofaces WITH multiplicity (the coboundary keeps duplicates)
+    // direct cofaces with multiplicity: δ keeps duplicates
     const CoboundaryOperator cob = coboundary(c, k);
-    // cofaces further up (any single one disqualifies)
+    // any higher coface disqualifies
     std::vector<Index> higher(static_cast<std::size_t>(c.count(k)), 0);
     for (int j = k + 2; j <= dim; ++j) {
       const Adjacency inc = incidence(c, k, j);
@@ -44,24 +41,19 @@ inline Marker free_faces(const Complex& c) {
 
 struct CollapseResult {
   Complex complex;
-  // composition of all elementary-collapse chain maps: removed cells go to
-  // zero, survivors keep track of their compacted indices
+  // the composite of the elementary-collapse chain maps
   ChainMap map;
   Index removed_pairs{0};
 };
 
-// Collapses the complex as far as elementary collapses reach: repeatedly
-// remove a free pair (deterministically the lowest-dimension,
-// lowest-index free face) until none remains. Every step is a simple
-// homotopy equivalence, so the result has the same homotopy type — a
-// collapsible complex (any disk) reduces to a point, a Möbius band to its
-// core circle. The endpoint is a complex with no free faces, not
-// necessarily a minimal model.
+// Removes free pairs until none remains, taking the lowest-dimension,
+// lowest-index free face each step. Every step is a simple homotopy
+// equivalence, so the homotopy type is preserved: a collapsible complex
+// reduces to a point, a Möbius band to its core circle. The endpoint has no
+// free face; it need not be a minimal model.
 //
-// Serial by design (each collapse changes the free-face set); cost is
-// O(pairs × complex size) — a diagnostic tool, not an assembly kernel.
-//
-// Collective. P=1 today.
+// Serial by design — each collapse changes the free-face set — at
+// O(pairs × N). A diagnostic, not an assembly kernel.
 inline CollapseResult collapse(const Complex& c) {
   Complex cur = c;
   ChainMap total = ChainMap::sized(c.counts());

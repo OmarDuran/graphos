@@ -10,25 +10,19 @@
 
 namespace graphos {
 
-// Extends a vertex-level identification upward through the strata: a k-cell
-// x is identified with a k-cell y when every face of x is (already) mapped
-// and the image of x's boundary chain equals y's boundary chain up to a
-// uniform orientation flip (which is reported). Processing runs bottom-up,
-// so edge identifications derive from the vertex pairs, face
-// identifications from the edges, and so on.
+// Extends a vertex identification upward: σ ~ τ in stratum k when every face
+// of σ is already mapped and the image of ∂σ equals ∂τ up to a uniform
+// orientation flip, which is reported. Bottom-up, so 1-cell identifications
+// follow from the vertex pairs, 2-cell from the 1-cells, and so on.
 //
-// This is the missing piece for PERIODIC boundary conditions: pair the
-// slave boundary vertices with their master images (a geometric decision),
-// lift, and quotient — a square becomes a cylinder, a twisted pairing a
-// Möbius band. It is the cross-level generalization of find_parallel_cells,
-// the same matching pushout's deduplication performs implicitly.
+// This is what periodic identification needs: pair the boundary vertices with
+// their images, lift, quotient — a square becomes a cylinder, a twisted
+// pairing a Möbius band. It is the cross-stratum form of find_parallel_cells,
+// the matching pushout's deduplication performs implicitly.
 //
-// Preconditions: vertex pairs must point at final representatives (no
-// chains a→b→c); cells whose faces are only partially mapped simply do not
-// lift, which is the correct behavior at the rim of a periodic patch.
-//
-// Logically collective: every rank supplies the vertex pairs it owns; the
-// result feeds quotient(). P=1 today.
+// Preconditions: pairs must name final representatives (no chains a→b→c). A
+// cell whose faces are only partly mapped does not lift, which is correct at
+// the rim of a periodic patch.
 inline std::vector<std::vector<Identification>> lift_identifications(
     const Complex& c, const std::vector<Identification>& vertex_identifications) {
   const int dim = c.dim();
@@ -52,7 +46,7 @@ inline std::vector<std::vector<Identification>> lift_identifications(
     const std::size_t sk = static_cast<std::size_t>(k);
     const BoundaryOperator& bnd = c.boundary(k);
 
-    // targets, keyed by sorted boundary index list (degenerate rows skipped)
+    // targets keyed by sorted boundary index list; degenerate rows skipped
     std::map<std::vector<Index>, std::pair<Index, std::vector<Sign>>> targets;
     for (Index y = 0; y < c.count(k); ++y) {
       row.clear();
@@ -76,7 +70,7 @@ inline std::vector<std::vector<Identification>> lift_identifications(
       targets.emplace(std::move(key), std::make_pair(y, std::move(sg)));
     }
 
-    // lift each fully mapped cell through the image of its boundary chain
+    // lift each fully mapped cell through the image of ∂σ
     for (Index x = 0; x < c.count(k); ++x) {
       row.clear();
       bool fully_mapped = bnd.offsets[x] < bnd.offsets[x + 1];

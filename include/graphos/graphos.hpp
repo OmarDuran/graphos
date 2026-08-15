@@ -1,6 +1,6 @@
 #pragma once
 
-// core: representation — the complex, its operators, and construction
+// core: the complex, its operators ∂_k and δ_k, and its constructors
 #include "graphos/core/build.hpp"
 #include "graphos/core/coboundary.hpp"
 #include "graphos/core/complex.hpp"
@@ -15,7 +15,7 @@
 #include "graphos/exec/forall.hpp"
 #include "graphos/exec/memory.hpp"
 
-// ops: transformations — complex in, complex + chain maps out
+// ops: the operation calculus — complex in, complex and chain maps out
 #include "graphos/ops/agglomerate.hpp"
 #include "graphos/ops/coarsen.hpp"
 #include "graphos/ops/collapse.hpp"
@@ -32,7 +32,7 @@
 #include "graphos/ops/subcomplex.hpp"
 #include "graphos/ops/subdivision.hpp"
 
-// queries: read-only questions — connectivity, validity, invariants, safety
+// queries: homology, connectivity, manifoldness, and the structural invariants
 #include "graphos/queries/adjacency.hpp"
 #include "graphos/queries/amalgamation.hpp"
 #include "graphos/queries/components.hpp"

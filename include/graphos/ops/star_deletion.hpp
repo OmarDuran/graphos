@@ -16,29 +16,25 @@ struct StarDeletionResult {
   ChainMap map;
 };
 
-// Deletes the closed stars of the marked cells: each marked cell is removed
-// together with every cell it is a face of, cascading up through the
-// skeleta. The result is the largest subcomplex of c containing none of the
-// marked cells. Survivors are compacted; the chain map records each cell's
-// fate (invalid_index for cells sent to zero).
+// Removes st(S) for the marked S: each marked cell with all its cofaces,
+// cascading up the strata. The result is the largest subcomplex of c meeting
+// no marked cell. Survivors are compacted; the chain map sends deleted cells
+// to 0.
 //
-// Collective. Every rank calls this with a Marker marked over its local
-// partition; the deletion is the union of all ranks' marks, and the cascade
-// propagates across partition boundaries (a fixed number of halo exchanges,
-// bounded by the dimension). P=1 today: the local partition is everything.
+// The union of all ranks' marks is deleted, and the cascade crosses partition
+// boundaries in a number of halo exchanges bounded by dim.
 //
-// Faces left without any coface are kept: in a mixed-dimensional complex a
-// bare vertex or edge is a legitimate maximal cell, and graphos cannot
-// distinguish an orphan from one. Pruning is a separate caller decision.
+// A cell left without cofaces is kept: in a mixed-dimensional complex a bare
+// vertex or edge is a legitimate maximal cell, indistinguishable from an
+// orphan. Pruning is the caller's decision.
 //
-// This op is the exemplar of the kernel form all bulk ops converge to:
-// mark -> cascade -> scan -> scatter phases through the exec seams, every
-// phase data-parallel over one stratum.
+// The kernel form every bulk operation takes: mark → cascade → scan →
+// scatter, each phase data-parallel over one stratum.
 inline StarDeletionResult star_deletion(const Complex& c, const Marker& cells) {
   const int dim = c.dim();
   cells.validate_for(c);
 
-  // mark: deleted[k][i] = 1 where the marker selects
+  // mark: deleted[k][i] = 1 where S selects
   std::vector<exec::Buffer<Index>> deleted;
   deleted.reserve(static_cast<std::size_t>(dim) + 1);
   for (int k = 0; k <= dim; ++k) {
@@ -48,8 +44,8 @@ inline StarDeletionResult star_deletion(const Complex& c, const Marker& cells) {
     exec::forall(c.count(k), [=](Index i) { g[i] = mf[i] ? 1 : 0; });
   }
 
-  // cascade: one parallel pass per stratum suffices because ∂ reaches
-  // exactly one level down
+  // cascade: one pass per stratum suffices, since ∂ reaches exactly one
+  // stratum down
   for (int k = 1; k <= dim; ++k) {
     const BoundaryOperator& bnd = c.boundary(k);
     const Index* offsets = bnd.offsets.data();
@@ -67,7 +63,7 @@ inline StarDeletionResult star_deletion(const Complex& c, const Marker& cells) {
     });
   }
 
-  // scan: compact surviving cells into contiguous indices
+  // scan: compact survivors into contiguous indices
   ChainMap map = ChainMap::sized(c.counts());
   std::vector<Index> kept_counts(static_cast<std::size_t>(dim) + 1, 0);
   for (int k = 0; k <= dim; ++k) {
@@ -84,7 +80,7 @@ inline StarDeletionResult star_deletion(const Complex& c, const Marker& cells) {
     exec::forall(n, [=](Index i) { mi[i] = g[i] ? invalid_index : pp[i]; });
   }
 
-  // scatter: assemble each surviving stratum's boundary operator
+  // scatter: assemble ∂_k on the survivors
   std::vector<BoundaryOperator> strata(static_cast<std::size_t>(dim) + 1);
   for (int k = 1; k <= dim; ++k) {
     const std::size_t sk = static_cast<std::size_t>(k);

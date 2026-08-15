@@ -5,32 +5,29 @@
 
 namespace graphos {
 
-// Local cell index within one dimension of one complex. Global IDs (64-bit)
-// exist only in the distributed indexing layer, never in kernels.
+// Index of a cell within one stratum of one complex. Global 64-bit IDs exist
+// only in the distributed indexing layer, never in kernels.
 using Index = std::int32_t;
 
-// Orientation coefficient. Stored entries are strictly -1 or +1; 0 never
-// appears in CSR storage (absence of an arc encodes 0).
+// Incidence number [σ : τ] ∈ {−1, +1}. Zero is never stored; absence encodes
+// it.
 using Sign = std::int8_t;
 
 inline constexpr Index invalid_index = -1;
 
-// Declares that cell `from` is the same cell as `to`, with `from` oriented
-// `rel_sign` relative to `to`. Which cells are "the same" is a geometric or
-// user-level decision made outside graphos; this struct is how it enters the
-// quotient.
+// The relation σ ~ τ with relative orientation rel_sign, generating the
+// equivalence a quotient collapses. Which cells are identified is decided
+// outside graphos; this is how that decision enters the complex.
 struct Identification {
   Index from{invalid_index};
   Index to{invalid_index};
   Sign rel_sign{1};
 };
 
-// The cellular chain map induced by a topology-changing operation: for each
-// dimension k, index[k][old] is the cell's index in the target complex, and
-// sign[k][old] the orientation coefficient picked up along the way. A cell
-// sent to zero (deleted, or merged away into its representative's star) has
-// index invalid_index. Cochains (fields, DoFs) attached to cells must be
-// transported through this map.
+// The chain map f_* : C_k(C) → C_k(C′) induced on generators by an operation:
+// index[k][σ] is the image cell, sign[k][σ] its orientation coefficient. A
+// generator sent to 0 carries invalid_index. Cochains are transported by
+// gathering through f_*.
 struct ChainMap {
   std::vector<std::vector<Index>> index;
   std::vector<std::vector<Sign>> sign;
@@ -47,8 +44,8 @@ struct ChainMap {
   }
 };
 
-// Composition of chain maps: follows `first` then `second`. A cell sent to
-// zero at either step is sent to zero by the composition.
+// (second ∘ first)_*, multiplying orientation coefficients. A generator sent
+// to 0 by either factor is sent to 0 by the composite.
 inline ChainMap compose(const ChainMap& first, const ChainMap& second) {
   ChainMap out;
   const std::size_t nk = first.index.size();

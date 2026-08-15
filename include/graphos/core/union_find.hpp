@@ -7,10 +7,9 @@
 
 namespace graphos {
 
-// Path-compressing union-find over the index range [0, n): the workhorse of
-// component labeling. Serial by design — the device/kernel form of
-// component labeling is iterative label propagation, which replaces this on
-// GPU rather than porting it.
+// Path-compressing union-find over [0, n), used to label connected
+// components. Serial by design: the device form of component labelling is
+// iterative label propagation, which replaces this rather than porting it.
 class UnionFind {
  public:
   explicit UnionFind(Index n) : parent_(static_cast<std::size_t>(n)) {

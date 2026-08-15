@@ -6,10 +6,9 @@
 
 namespace graphos {
 
-// The signed coboundary operator δ_k: the transpose of ∂_{k+1}, in CSR
-// layout. Row f of δ_k lists the (k+1)-cells having f on their boundary,
-// each with the same orientation coefficient it uses to reference f — so
-// applying δ_k to a k-cochain is the discrete differential.
+// δ_k = ∂_{k+1}^T, the coboundary operator, in CSR. Row τ lists the cofaces σ
+// of τ with [σ : τ]. Applied to a k-cochain it is the discrete exterior
+// derivative.
 struct CoboundaryOperator {
   std::vector<Index> offsets;
   std::vector<Index> indices;

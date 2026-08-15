@@ -13,11 +13,10 @@ namespace graphos {
 struct ProductResult {
   Complex complex;
 
-  // Product cells are pairs (α, β) with dim(α×β) = dim α + dim β. For each
-  // product dimension k, cells are laid out in blocks of fixed factor
-  // dimensions (p, q = k−p), ascending in p, i-major within a block:
-  //   index(α_i × β_j) = offset + i * b_count + j.
-  // Empty blocks (either factor stratum empty) are omitted.
+  // A product cell is a pair α × β with dim = dim α + dim β. Stratum k is
+  // laid out in blocks of fixed (p, q = k − p), ascending in p, i-major:
+  //   index(α_i × β_j) = offset + i · b_count + j.
+  // Blocks with an empty factor stratum are omitted.
   struct Block {
     int p;
     int q;
@@ -28,14 +27,11 @@ struct ProductResult {
   std::vector<std::vector<Block>> blocks;  // per product dimension
 };
 
-// The Cartesian product A × B, with boundary by the Leibniz rule:
-//   ∂(α×β) = ∂α×β + (−1)^{dim α} α×∂β.
-// product(mesh, segment) is mesh EXTRUSION (triangles become prisms, one
-// layer per segment edge); products of intervals build tensor cells. The
-// factor structure is preserved in `blocks`, and the Euler characteristic
-// multiplies: χ(A×B) = χ(A)·χ(B).
-//
-// Collective. P=1 today.
+// A × B with the Leibniz boundary
+//   ∂(α × β) = ∂α × β + (−1)^{dim α} α × ∂β.
+// product(mesh, segment) is extrusion, one layer per 1-cell; products of
+// intervals give tensor cells. The factor structure survives in `blocks`, and
+// χ(A × B) = χ(A) · χ(B).
 inline ProductResult product(const Complex& a, const Complex& b) {
   const int dim = a.dim() + b.dim();
 

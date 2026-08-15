@@ -15,29 +15,22 @@ namespace graphos {
 
 struct ReplaceResult {
   Complex complex;
-  // host -> result: cells of the excised region go to zero, everything
-  // else survives into the repaired complex
+  // host → result: excised cells go to 0, the rest survive
   ChainMap map;
-  // patch -> result: where each patch cell landed
+  // patch → result
   ChainMap patch_map;
 };
 
-// Local surgery, the primitive of INCREMENTAL IMPRINTING: excise the open
-// star of the marked region and amalgamate a replacement patch along the
-// frontier — star_deletion followed by the pushout, fused so the chain
-// maps compose into single host→result and patch→result maps. This is the
-// excision + amalgamation pattern executed as one operation: cutting a
-// fault through a cell replaces it (and its split boundary faces) by the
-// imprinted polyhedral pieces without rebuilding the rest of the complex.
+// Surgery: excise st(S) and amalgamate a patch along the frontier —
+// star_deletion followed by pushout, fused so the chain maps compose into
+// single host→result and patch→result maps. Cutting a fault through a cell
+// replaces it and its split faces without rebuilding the complex.
 //
-// The glue is a vertex correspondence (patch vertex -> host vertex, host
-// indices as in the ORIGINAL complex), lifted through the strata by
-// boundary-chain matching — shared edges and faces of patch and frontier
-// are found combinatorially and need not be enumerated. Glue targets must
-// survive the excision (lie outside the closed star of the region);
-// otherwise the surgery is ill-posed and throws.
-//
-// Logically collective: region and glue are supplied per-rank. P=1 today.
+// The glue is a vertex correspondence (patch vertex → host vertex, indices as
+// in the original complex), lifted through the strata by boundary-chain
+// matching, so shared edges and faces need not be enumerated. Glue targets
+// must survive the excision — lie outside cl(st S) — or the surgery is
+// ill-posed and throws.
 inline ReplaceResult replace(const Complex& c, const Marker& region, const Complex& patch,
                              const std::vector<Identification>& vertex_glue) {
   StarDeletionResult excised = star_deletion(c, region);

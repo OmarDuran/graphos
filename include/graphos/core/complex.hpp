@@ -14,12 +14,12 @@
 
 namespace graphos {
 
-// The boundary operator ∂_k as a signed sparse matrix from k-cells to
-// (k-1)-cells, in CSR layout. Row e lists the (k-1)-cells on the boundary of
-// cell e with their orientation coefficients (+/-1 only).
+// ∂_k ∈ {−1, 0, +1}^{N_{k−1} × N_k}, stored row-major by k-cell: row σ holds
+// the (k−1)-faces τ of σ with incidence numbers [σ : τ] ∈ {±1}. Absence
+// encodes 0, so the CSR rows are the columns of ∂_k.
 //
-// Variable-arity CSR is the general layout; a fixed-arity strided
-// specialization (no offsets) is planned for single-cell-type complexes.
+// Variable-arity CSR is the general layout; a fixed-arity strided form is
+// planned for complexes of a single cell type.
 struct BoundaryOperator {
   std::vector<Index> offsets{0};
   std::vector<Index> indices;
@@ -31,8 +31,7 @@ struct BoundaryOperator {
     if (row_indices.size() != row_signs.size()) {
       throw std::invalid_argument("BoundaryOperator::append_row: indices/signs size mismatch");
     }
-    // offsets are Index-typed: one operator's nnz is capped at Index max
-    // (~2.1e9). Guard loudly rather than overflow silently at scale.
+    // offsets are Index-typed, so nnz ≤ max(Index) ≈ 2.1e9
     if (indices.size() + row_indices.size() >
         static_cast<std::size_t>(std::numeric_limits<Index>::max())) {
       throw std::overflow_error("BoundaryOperator: nnz exceeds Index capacity");
@@ -43,15 +42,13 @@ struct BoundaryOperator {
   }
 };
 
-// A finite, metric-free cell complex, stratified by dimension: cell counts
-// per dimension plus the boundary operators ∂_k. Cells are nothing but
-// indices; all geometric meaning (coordinates, metrics) lives outside
-// graphos.
+// A finite stratified signed incidence structure C = (N₀, …, N_n ; ∂₁, …, ∂_n).
+// A k-cell is an index; no realization, coordinate or metric is stored.
 //
-// The complex may be mixed-dimensional: any k-skeleton may contain maximal
-// cells (cells that are not faces of anything above), which is how
-// lower-dimensional subdomains (fractures, interfaces, wells) coexist with
-// the bulk.
+// C is a chain complex exactly when ∂_{k−1} ∘ ∂_k = 0; the representation does
+// not impose it (see d_squared_is_zero). Deliberately admitted: mixed-
+// dimensional (maximal cells in any stratum), polytopal, non-regular,
+// non-manifold, non-orientable. Validity is queried, not presupposed.
 class Complex {
  public:
   explicit Complex(int dim)
@@ -60,7 +57,7 @@ class Complex {
     if (dim < 0) throw std::invalid_argument("Complex: dimension must be >= 0");
   }
 
-  // Bulk constructor for operations that assemble whole strata in kernels.
+  // Stratum-wise constructor, for operations that assemble ∂_k in kernels.
   Complex(std::vector<Index> cell_counts, std::vector<BoundaryOperator> boundary)
       : counts_(std::move(cell_counts)), boundary_(std::move(boundary)) {
     if (counts_.empty() || boundary_.size() != counts_.size()) {
@@ -75,8 +72,7 @@ class Complex {
 
   int dim() const { return static_cast<int>(counts_.size()) - 1; }
 
-  // The GLOBAL number of k-cells: a collective value, identical on every
-  // rank (P=1: trivially the local count).
+  // N_k, global and rank-invariant (P = 1: the local count).
   Index count(int k) const {
     return (k >= 0 && k <= dim()) ? counts_[static_cast<std::size_t>(k)] : Index{0};
   }
@@ -89,7 +85,7 @@ class Complex {
     return counts_[0];
   }
 
-  // Attaches a k-cell along its boundary chain. Returns the new cell's index.
+  // Attaches a k-cell along the (k−1)-chain ∂σ — the CW paradigm. Returns σ.
   Index attach_cell(int k, std::span<const Index> bnd, std::span<const Sign> sg) {
     if (k < 1 || k > dim()) {
       throw std::invalid_argument("Complex::attach_cell: dimension out of range");
@@ -123,8 +119,8 @@ class Complex {
     return boundary_[static_cast<std::size_t>(k)];
   }
 
-  // Structural invariants: row counts match cell counts, boundary indices in
-  // range, orientation coefficients strictly +/-1.
+  // Structural invariants: row counts equal N_k, face indices in [0, N_{k−1}),
+  // incidence numbers strictly ±1. Not ∂∘∂ = 0, which is d_squared_is_zero.
   void validate() const {
     for (int k = 1; k <= dim(); ++k) {
       const BoundaryOperator& bnd = boundary_[static_cast<std::size_t>(k)];
@@ -150,9 +146,8 @@ class Complex {
   std::vector<BoundaryOperator> boundary_;  // boundary_[k] valid for k >= 1
 };
 
-// The fundamental identity of a chain complex: ∂_{k-1} ∘ ∂_k = 0. This is
-// the check that catches every orientation-convention mistake.
-// Collective: the verdict is global and identical on every rank (P=1 today).
+// ∂_{k−1} ∘ ∂_k = 0, the defining identity of a chain complex: every
+// (k−2)-face of σ is reached twice with opposite incidence. Rank-invariant.
 inline bool d_squared_is_zero(const Complex& c) {
   for (int k = 2; k <= c.dim(); ++k) {
     const BoundaryOperator& hi = c.boundary(k);
@@ -175,7 +170,7 @@ inline bool d_squared_is_zero(const Complex& c) {
   return true;
 }
 
-// Collective: the global alternating sum, identical on every rank.
+// χ(C) = Σ_k (−1)^k N_k. Rank-invariant.
 inline long long euler_characteristic(const Complex& c) {
   long long chi = 0;
   for (int k = 0; k <= c.dim(); ++k) {

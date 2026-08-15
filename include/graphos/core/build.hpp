@@ -11,36 +11,30 @@
 
 namespace graphos {
 
-// Mesh ingestion: build complexes from the connectivity forms meshes
-// actually arrive in, deriving the intermediate strata (unique edges,
-// unique faces) and a deterministic orientation convention so that
+// Constructors from mesh connectivity: intermediate strata are derived (each
+// edge, each face once) under a deterministic orientation convention, so
 // ∂∘∂ = 0 holds by construction.
 //
-// graphos is polytopal by design, so the general constructors are the
-// foundation: polygons are arbitrary vertex cycles, polyhedra are
-// arbitrary collections of polygonal faces (the VTK-polyhedron /
-// OpenFOAM description). Simplex connectivity (meshio-style arrays) is a
-// convenience wrapper over them, not a privileged case.
+// Polytopal, so the general forms are primitive: a 2-cell is an arbitrary
+// vertex cycle, a 3-cell an arbitrary set of polygonal faces (the
+// VTK-polyhedron description). Simplices are a wrapper, not a special case.
 //
-// Conventions (deterministic, insertion-order independent):
-//  - edges are oriented from the smaller to the larger vertex index;
-//  - a derived face's intrinsic orientation is its CANONICAL cycle
-//    (rotated to start at its smallest vertex, directed toward that
-//    vertex's smaller neighbor); a cell references the face with +1/−1 by
-//    comparing its own traversal against the canonical one;
-//  - faces are identified by their vertex set; two cells describing the
-//    same set with cyclically-incompatible orderings is an error.
-// Whether the resulting global orientation is consistent depends on the
-// input windings — orient() normalizes afterwards if needed.
+// Conventions, independent of insertion order:
+//  - a 1-cell runs from the smaller to the larger vertex index;
+//  - a derived 2-cell carries its canonical cycle (rotated to start at its
+//    smallest vertex, directed toward that vertex's smaller neighbour); a
+//    coface sets [σ : τ] by comparing its traversal against that cycle;
+//  - a 2-cell is keyed by its vertex set; two cells giving that set
+//    cyclically incompatible orderings is an error.
+// Orientability of the result is not asserted here; orient() normalizes it.
 //
-// All constructors are Collective (each rank builds its local partition;
-// P=1 today) and serial host code — the kernel-form derivation
-// (sort/unique at scale) is the planned port.
+// Collective (each rank builds its local partition; P = 1 today), serial
+// host code.
 
 namespace detail {
 
-// hashing for the derivation pools: vertex pairs pack into one word,
-// vertex tuples run FNV-1a — the builders' hot lookups
+// keys for the derivation pools: vertex pairs pack into one word, tuples hash
+// by FNV-1a
 struct PairHash {
   std::size_t operator()(const std::pair<Index, Index>& p) const {
     const std::uint64_t w = (static_cast<std::uint64_t>(static_cast<std::uint32_t>(p.first)) << 32) |
@@ -79,8 +73,8 @@ inline void check_cycle(const std::vector<Index>& cyc, Index n_vertices, const c
   }
 }
 
-// canonical form of a vertex cycle, plus the input's orientation relative
-// to it (+1 same direction, −1 reversed)
+// canonical form of a vertex cycle, and the input's orientation relative to
+// it (±1)
 inline std::pair<std::vector<Index>, Sign> canonical_cycle(const std::vector<Index>& cyc) {
   const std::size_t n = cyc.size();
   std::size_t m = 0;
@@ -98,10 +92,9 @@ inline std::pair<std::vector<Index>, Sign> canonical_cycle(const std::vector<Ind
   return {std::move(canon), Sign{-1}};
 }
 
-// the directed vertex cycle a 2-cell stores, reconstructed from its signed
-// edge chain (an edge with +1 runs low -> high); faces built by cycle_row
-// store their canonical orientation, so canonicalizing the reconstruction
-// recovers exactly the cycle they were built from
+// the directed vertex cycle of a 2-cell, reconstructed from its signed edge
+// chain (a 1-cell with +1 runs low → high). Cells built by cycle_row store
+// their canonical cycle, so canonicalizing the reconstruction recovers it.
 inline std::vector<Index> stored_face_cycle(const Complex& c, Index face) {
   const BoundaryOperator& b2 = c.boundary(2);
   const BoundaryOperator& b1 = c.boundary(1);
@@ -147,7 +140,7 @@ class EdgePool {
   std::unordered_map<std::pair<Index, Index>, Index, PairHash> edges_;
 };
 
-// face row from a cycle: consecutive edges signed by traversal direction
+// the ∂₂ row of a cycle: consecutive 1-cells signed by traversal direction
 inline void cycle_row(EdgePool& edges, const std::vector<Index>& cyc, std::vector<Index>& row_idx,
                       std::vector<Sign>& row_sg) {
   row_idx.clear();
@@ -162,7 +155,7 @@ inline void cycle_row(EdgePool& edges, const std::vector<Index>& cyc, std::vecto
 
 }  // namespace detail
 
-// 1D: a complex of segments (no deduplication — each pair is one edge).
+// 1-complex: one 1-cell per pair, not deduplicated.
 inline Complex from_edges(Index n_vertices, const std::vector<std::vector<Index>>& segments) {
   Complex c(1);
   c.attach_vertices(n_vertices);
@@ -175,7 +168,7 @@ inline Complex from_edges(Index n_vertices, const std::vector<std::vector<Index>
   return c;
 }
 
-// 2D: polygonal cells as vertex cycles (any polygon, any mix of them).
+// 2-complex: 2-cells as vertex cycles, of any arity and any mix.
 inline Complex from_polygons(Index n_vertices, const std::vector<std::vector<Index>>& polygons) {
   Complex c(2);
   c.attach_vertices(n_vertices);
@@ -190,15 +183,12 @@ inline Complex from_polygons(Index n_vertices, const std::vector<std::vector<Ind
   return c;
 }
 
-// 3D: polyhedral cells, each a collection of polygonal faces given as
-// vertex cycles (the general polymesh description). Faces shared between
-// cells are derived once; each cell references them with the relative
-// orientation of its own winding.
+// 3-complex: each 3-cell a set of 2-cells given as vertex cycles. A face
+// shared by two cofaces is derived once, each referencing it with the
+// incidence number of its own winding.
 //
-// FLAT CSR core: cell_offsets[i]..cell_offsets[i+1] index into
-// face_offsets; face_offsets[f]..face_offsets[f+1] index into
-// face_vertices. Large meshes should enter here — no nested vectors, no
-// per-face heap traffic on the input side.
+// Flat CSR: cell_offsets indexes face_offsets, which indexes face_vertices.
+// Large meshes enter here — no nested vectors on the input side.
 inline Complex from_polyhedra(Index n_vertices, std::span<const Index> cell_offsets,
                               std::span<const Index> face_offsets,
                               std::span<const Index> face_vertices) {
@@ -206,9 +196,8 @@ inline Complex from_polyhedra(Index n_vertices, std::span<const Index> cell_offs
   c.attach_vertices(n_vertices);
   detail::EdgePool edges(c);
   edges.reserve(face_vertices.size() / 2);  // arcs ~ 2x edges on conformal meshes
-  // face key: sorted vertex set -> index; the canonical cycle is NOT
-  // stored (it is recoverable from the complex), so the pool stays lean
-  // on large meshes
+  // sorted vertex set → face index. The canonical cycle is recoverable from
+  // the complex and so is not stored.
   std::unordered_map<std::vector<Index>, Index, detail::VertsHash> faces;
   faces.reserve(face_offsets.empty() ? 0 : face_offsets.size() - 1);  // upper bound
   std::vector<Index> row_idx, cell_idx, cyc, key;
@@ -264,8 +253,8 @@ inline Complex from_polyhedra(Index n_vertices,
 
 namespace detail {
 
-// derived simplex pool: sorted (k+1)-tuple -> cell index, built on demand
-// with the standard simplex boundary (omit the i-th vertex, sign (−1)^i)
+// sorted (k+1)-tuple → k-cell, built on demand with the simplex boundary
+// ∂[v₀…v_k] = Σ_i (−1)^i [v₀…v̂_i…v_k]
 inline Index get_simplex(Complex& c,
                          std::vector<std::unordered_map<std::vector<Index>, Index, VertsHash>>& pool,
                          int k, const std::vector<Index>& sorted_verts) {
@@ -287,7 +276,7 @@ inline Index get_simplex(Complex& c,
   return idx;
 }
 
-// parity of the permutation taking `sorted` to `input` (+1 even, −1 odd)
+// parity of the permutation taking `sorted` to `input` (±1)
 inline Sign permutation_parity(const std::vector<Index>& input) {
   std::vector<Index> v = input;
   int swaps = 0;
@@ -306,13 +295,11 @@ inline Sign permutation_parity(const std::vector<Index>& input) {
 
 }  // namespace detail
 
-// Simplex connectivity (meshio-style) in ANY dimension d >= 1: each cell is
-// a (d+1)-tuple of vertices, every intermediate stratum is derived (each
-// (k+1)-subset once, oriented by increasing vertex order with the standard
-// (−1)^i boundary signs), and each top cell carries the orientation of its
-// input vertex ordering (permutation parity relative to sorted) — so
-// positively-ordered tets, pentachora, ... come out consistently oriented.
-// ∂∘∂ = 0 by construction at every dimension.
+// Simplicial connectivity in any dimension d ≥ 1: a d-cell is a (d+1)-tuple.
+// Every (k+1)-subset becomes one k-cell, oriented by increasing vertex order
+// under the simplex boundary; a d-cell carries the parity of its input
+// ordering, so consistently ordered simplices come out coherently oriented.
+// ∂∘∂ = 0 by construction in every stratum.
 inline Complex from_simplices(int dim, Index n_vertices,
                               const std::vector<std::vector<Index>>& cells) {
   if (dim < 1) throw std::invalid_argument("from_simplices: dim must be >= 1");

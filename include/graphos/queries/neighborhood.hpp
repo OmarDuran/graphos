@@ -6,24 +6,19 @@
 
 namespace graphos {
 
-// Set-level neighborhood markers: the bulk counterparts of the per-cell
-// star/closure/link queries on FrozenComplex, returned as Markers so they
-// compose with subcomplex(), star_deletion(), and the relative Betti
-// numbers. Together they make the excision/regular-neighborhood
-// decomposition computable:
-//   st(S)       = star_of(c, S)                     (the open star)
-//   cl(st(S))   = closure_of(c, star_of(c, S))      (the regular nbhd)
-//   lk(S)       = link_of(c, S)                     (cl(st S) ∖ st(cl S))
-//   frontier(S) = frontier_of(c, S)                 (cl(st S) ∖ st(S))
-// frontier_of is the boundary of the void left by star_deletion(c, S) —
-// what a patch is glued to in the pushout repair. It coincides with lk(S)
-// when S is a set of vertices, but not in general: the link of a top cell
-// is empty while its frontier is its boundary sphere.
-//
-// All are Collective (marks are locally evaluated, the union across ranks
-// is the selection). P=1 today.
+// Set-level neighbourhoods, the bulk counterparts of the per-cell st/cl/lk on
+// FrozenComplex, returned as Markers so they compose with subcomplex(),
+// star_deletion() and the relative Betti numbers. Together they make the
+// excision decomposition computable:
+//   st(S)       = star_of(c, S)                    the open star
+//   cl(st(S))   = closure_of(c, star_of(c, S))     the regular neighbourhood
+//   lk(S)       = link_of(c, S)                    cl(st S) ∖ st(cl S)
+//   frontier(S) = frontier_of(c, S)                cl(st S) ∖ st(S)
+// The frontier bounds the void left by star_deletion(c, S) and is what a patch
+// is glued to in the pushout. It equals lk(S) for a set of vertices but not in
+// general: the link of a top cell is empty, its frontier its boundary sphere.
 
-// The open star: the marked cells and every cell having one as a face.
+// st(S): the marked cells with all their cofaces.
 inline Marker star_of(const Complex& c, const Marker& cells) {
   cells.validate_for(c);
   Marker out(c);
@@ -47,7 +42,7 @@ inline Marker star_of(const Complex& c, const Marker& cells) {
   return out;
 }
 
-// The closure: the marked cells and all their faces.
+// cl(S): the marked cells with all their faces.
 inline Marker closure_of(const Complex& c, const Marker& cells) {
   cells.validate_for(c);
   Marker out(c);
@@ -70,7 +65,7 @@ inline Marker closure_of(const Complex& c, const Marker& cells) {
   return out;
 }
 
-// The link: lk(S) = cl(st(S)) ∖ st(cl(S)).
+// lk(S) = cl(st(S)) ∖ st(cl(S)).
 inline Marker link_of(const Complex& c, const Marker& cells) {
   const Marker cl_st = closure_of(c, star_of(c, cells));
   const Marker st_cl = star_of(c, closure_of(c, cells));
@@ -83,8 +78,8 @@ inline Marker link_of(const Complex& c, const Marker& cells) {
   return out;
 }
 
-// The excision frontier: cl(st(S)) ∖ st(S), the cells that survive
-// star_deletion(c, S) while touching the removed region.
+// cl(st(S)) ∖ st(S): the cells surviving star_deletion(c, S) that meet the
+// removed region.
 inline Marker frontier_of(const Complex& c, const Marker& cells) {
   const Marker st = star_of(c, cells);
   const Marker cl_st = closure_of(c, st);

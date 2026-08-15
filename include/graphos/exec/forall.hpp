@@ -10,15 +10,13 @@
 
 namespace graphos::exec {
 
-// The execution seam: every bulk kernel phase in graphos ops goes through
-// these primitives. With RAJA enabled they dispatch to RAJA policies
-// (OpenMP when RAJA was built with it, sequential otherwise); without RAJA
-// they are plain loops with identical semantics.
+// The execution seam every bulk phase of an operation goes through. Under
+// RAJA these dispatch to RAJA policies (OpenMP if RAJA was built with it);
+// without it they are plain loops of identical semantics.
 //
-// Kernel bodies must therefore be data-parallel over their index range:
-// writes to distinct indices only, no cross-iteration ordering assumptions.
-// Device policies (CUDA/HIP/SYCL) arrive once persistent storage moves to
-// CHAI-managed arrays; the op code is written to survive that unchanged.
+// Kernel bodies must be data-parallel over the index range: writes to
+// distinct indices only, no cross-iteration ordering. Device policies arrive
+// with CHAI-managed storage, and operation code is written to survive it.
 
 #if defined(GRAPHOS_HAVE_RAJA)
 

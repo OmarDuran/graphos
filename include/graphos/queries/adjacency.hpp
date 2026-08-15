@@ -9,12 +9,11 @@
 
 namespace graphos {
 
-// Generalized adjacency between k-cells: two k-cells are adjacent when
-// they share a via-cell. via = k-1 is facet-adjacency (the mesh dual
-// graph); via = 0 is node-adjacency; any stratum in between works. Rows
-// are sorted, duplicate-free, and exclude the cell itself.
+// Adjacency of k-cells through a common via-cell. via = k−1 is facet
+// adjacency (the dual graph), via = 0 vertex adjacency, any stratum between
+// is admissible. Rows are sorted, duplicate-free, and exclude σ itself.
 //
-// Local: computed per rank over its own cells; no communication implied.
+// Local; no communication implied.
 inline Adjacency adjacency(const Complex& c, int k, int via) {
   if (k < 0 || k > c.dim() || via < 0 || via > c.dim()) {
     throw std::invalid_argument("adjacency: dimension out of range");

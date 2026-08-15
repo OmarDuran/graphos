@@ -15,22 +15,16 @@ struct QuotientResult {
   ChainMap map;
 };
 
-// The quotient complex under the given per-dimension identifications: each
-// `from` cell is identified with its `to` representative, boundary chains are
-// rewritten through the quotient map (orientation flips propagate into the
-// star of every reversed cell), and surviving cells are compacted.
+// C/~ under the given per-stratum identifications: each `from` cell is
+// identified with its `to` representative, boundary chains are rewritten
+// through the quotient map — an orientation flip propagates into st(σ) — and
+// survivors are compacted.
 //
-// Logically collective: every rank participates, supplying identifications
-// for cells of its own partition; chains spanning ranks resolve through a
-// distributed union-find. P=1 today: all cells are local.
+// Precondition, the caller's to establish (via find_parallel_cells or a
+// geometric decision): identified cells have equal boundary chains up to
+// rel_sign. The identified cell's own row is discarded, not checked.
 //
-// Precondition (caller's responsibility, typically via find_parallel_cells
-// or an external geometric decision): identified cells have equal boundary
-// chains up to rel_sign. The identified cell's own boundary row is
-// discarded, not checked.
-//
-// Identification chains (a~b, b~c) resolve with sign composition; cycles are
-// an error.
+// Chains a ~ b ~ c resolve with sign composition; cycles are an error.
 inline QuotientResult quotient(const Complex& c,
                                const std::vector<std::vector<Identification>>& identifications) {
   const int dim = c.dim();
@@ -108,15 +102,13 @@ inline QuotientResult quotient(const Complex& c,
   return QuotientResult{std::move(out), std::move(map)};
 }
 
-// Finds parallel k-cells: cells whose boundary chains coincide as signed
-// sets, i.e. candidates for identification after lower skeleta have been
-// glued. Two cells match when they reference the same faces and their
-// orientation patterns agree up to a uniform flip (the reported rel_sign).
+// k-cells whose boundary chains agree as signed sets, up to a uniform flip
+// (the reported rel_sign): the candidates for identification once the lower
+// strata are glued.
 //
-// This is deliberately a separate query rather than something quotient does
-// implicitly: in a BRep two distinct curves may legitimately span the same
-// two vertices, and only the caller (with geometric knowledge) can decide.
-// Degenerate boundary chains (repeated faces) are skipped.
+// A separate query rather than an implicit step of quotient, because two
+// distinct cells may legitimately share a boundary and only the caller can
+// decide. Degenerate chains (repeated faces) are skipped.
 inline std::vector<Identification> find_parallel_cells(const Complex& c, int k) {
   std::vector<Identification> out;
   if (k < 1 || k > c.dim()) {

@@ -10,9 +10,8 @@
 
 namespace graphos {
 
-// Component labels of the k-cells: label[i] in [0, count), deterministic
-// (components numbered by their lowest-indexed cell), so results are
-// independent of traversal and — later — of rank count.
+// Component labels of the k-cells, numbered by lowest-indexed member, so the
+// labelling is independent of traversal order and of rank count.
 struct ComponentLabels {
   std::vector<Index> label;
   Index count{0};
@@ -59,32 +58,26 @@ inline ComponentLabels components_via(const Complex& c, int k, int via, const Ma
 
 }  // namespace detail
 
-// Connected components of the k-cells, two cells adjacent iff incident to a
-// common via-cell (via < k: shared faces, the usual case — e.g. top cells
-// through facets identifies subdomains; via > k: shared cofaces — e.g.
-// vertices through edges).
+// Connected components of the k-cells under adjacency through a common
+// via-cell: via < k joins through shared faces (top cells through facets are
+// the subdomains), via > k through shared cofaces.
 //
-// Collective: labels are globally consistent (under distribution this is a
-// distributed label propagation; P=1 today).
+// Rank-invariant labels; distributed label propagation under P > 1.
 inline ComponentLabels connected_components(const Complex& c, int k, int via) {
   return detail::components_via(c, k, via, nullptr);
 }
 
-// As above, with marked via-cells excluded as connectors: the "sides of a
-// cut" computation — exclude the interface facets and the components of the
-// top cells are the subdomains the interface separates. Only marks of
-// dimension `via` are consulted.
+// As above with marked via-cells removed as connectors: excluding an
+// interface leaves the components it separates. Only marks in dimension
+// `via` are read.
 inline ComponentLabels connected_components(const Complex& c, int k, int via,
                                             const Marker& exclude_via) {
   return detail::components_via(c, k, via, &exclude_via);
 }
 
-// Components of the whole complex across all dimensions, cells connected by
-// incidence: β0 of the (possibly mixed-dimensional) complex. label[k][i] is
-// the component of the i-th k-cell; detached lower-dimensional domains
-// (e.g. extracted fracture networks) count as their own components.
-//
-// Collective.
+// Components of the whole complex under incidence, across all strata: β₀ of
+// the (possibly mixed-dimensional) complex. A detached lower-dimensional
+// stratum is its own component. Rank-invariant.
 struct ComplexComponents {
   std::vector<std::vector<Index>> label;
   Index count{0};

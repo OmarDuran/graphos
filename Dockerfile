@@ -83,7 +83,7 @@ RUN rm -rf /src/build \
        '  graphos::Complex c(2);' \
        '  c.attach_vertices(3);' \
        '  c.attach_cell(1, {0, 1}, {-1, 1});' \
-       '  std::printf("consumer: dim=%d edges=%lld\\n", c.dim(), (long long)c.count(1));' \
+       '  std::printf("consumer: dim=%d edges=%lld\n", c.dim(), (long long)c.count(1));' \
        '  return c.count(1) == 1 ? 0 : 1;' \
        '}' > main.cpp \
     && cmake -S . -B build -DCMAKE_PREFIX_PATH="/opt/graphos;${TPL_PREFIX}" \

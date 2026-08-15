@@ -10,16 +10,13 @@
 
 namespace graphos::exec {
 
-// Persistent storage for frozen complexes — the CHAI seam. With CHAI
-// enabled, data lives in a chai::ManagedArray whose value-copies migrate
-// between memory spaces when captured into RAJA kernels; the fallback is
-// host memory behind the same interface. Distinct from Buffer, which is
-// kernel-scratch: Array outlives kernels and is what device execution
-// policies will read.
+// Persistent storage for frozen complexes: the CHAI seam. Under CHAI the data
+// is a chai::ManagedArray whose value-copies migrate between memory spaces on
+// capture into a RAJA kernel; the fallback is host memory behind the same
+// interface. Unlike Buffer, an Array outlives the kernels that read it.
 //
-// Move-only RAII owner. host access through data()/operator[]; view()
-// yields the handle to capture BY VALUE in kernels (ManagedArray with CHAI,
-// raw pointer on the host fallback).
+// Move-only. Host access through data()/operator[]; view() yields the handle
+// to capture by value in a kernel.
 template <typename T>
 class Array {
  public:

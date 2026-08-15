@@ -16,19 +16,18 @@
 
 namespace graphos {
 
-// Necessary conditions for c to be a combinatorial n-manifold with
-// boundary. Full manifold recognition is undecidable in high dimension;
-// these checks catch the failures that actually occur in practice:
+// Necessary conditions for a combinatorial n-manifold with boundary.
+// Recognition is undecidable in general; these are the decidable local ones:
 //
-//   pure            every cell is a face of a top cell (mixed-dimensional
-//                   complexes report false BY DESIGN — validate extracted
-//                   pure subcomplexes, not the mixed-dimensional whole)
-//   facet_condition       every facet has one or two top cofaces (no book
+//   pure            every cell is a face of a top cell (a mixed-dimensional
+//                   complex fails by construction; test extracted pure
+//                   subcomplexes instead)
+//   facet_condition every facet has one or two top cofaces (no book
 //                   junctions)
-//   links_connected the top-star of every cell of dim <= n-2 is connected
-//                   through facets containing it (no pinch points)
+//   links_connected for every σ with dim σ ≤ n−2, st(σ) is connected through
+//                   the facets containing σ (no pinch points)
 //
-// `offending` marks every cell that failed a check.
+// `offending` marks each cell that failed.
 struct ManifoldReport {
   bool manifold_like{true};  // all of the below
   bool pure{true};

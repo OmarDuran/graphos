@@ -12,26 +12,20 @@
 
 namespace graphos {
 
-// Cellular amalgamation criteria — the PL lemma behind sound coarsening:
-// the union of two k-cells glued along a common (k−1)-ball in their
-// boundaries is again a k-cell. Whether a pair (σ, τ) satisfies the
-// hypothesis decomposes into two combinatorial questions:
+// The PL amalgamation lemma: σ ∪ τ glued along a common (k−1)-ball in their
+// boundaries is again a k-cell. The hypothesis splits into two combinatorial
+// tests on (σ, τ):
 //
-//   1. Is the COMMON BOUNDARY ∂σ ∩ ∂τ ball-like? Decided here as
-//      connected + Z₂-acyclic: exact for one-dimensional common boundaries
-//      (an acyclic connected graph is a tree, hence an interval when the
-//      co-degrees are right), the standard practical criterion above —
-//      homology cannot see π₁, so acyclicity is necessary, not sufficient,
-//      in higher dimension.
-//   2. Do the closures intersect PROPERLY — cl σ ∩ cl τ = cl(∂σ ∩ ∂τ)?
-//      Any EXCESS INTERSECTION (an isolated vertex or edge contact away
-//      from the common boundary) would pinch the amalgamated cell into a
+//   1. Is ∂σ ∩ ∂τ ball-like? Decided as connected and Z₂-acyclic. Exact when
+//      the common boundary is 1-dimensional (a connected acyclic graph is a
+//      tree, an interval under the right co-degrees); in higher dimension
+//      acyclicity is necessary but not sufficient, since H_* does not see π₁.
+//   2. Do the closures meet properly, cl σ ∩ cl τ = cl(∂σ ∩ ∂τ)? Excess
+//      intersection away from the common boundary pinches σ ∪ τ into a
 //      non-manifold wedge.
 
-// The common boundary ∂σ ∩ ∂τ of two k-cells, with the topology of its
-// closure. `acyclic` = connected and Z₂-acyclic (see caveat above).
-//
-// Local (a query about two given cells). P=1 today.
+// ∂σ ∩ ∂τ with the topology of its closure; `acyclic` is connected and
+// Z₂-acyclic. Local.
 struct CommonBoundary {
   Marker facets;
   Index n_facets{0};
@@ -68,12 +62,8 @@ inline CommonBoundary common_boundary(const Complex& c, int k, Index a, Index b)
   return out;
 }
 
-// The excess intersection of two k-cells: cl(σ) ∩ cl(τ) ∖ cl(∂σ ∩ ∂τ).
-// Nonempty means the closures meet IMPROPERLY — the amalgamated cell's
-// boundary would touch itself at exactly these cells (pinch points, in
-// the non-manifold sense).
-//
-// Local. P=1 today.
+// cl(σ) ∩ cl(τ) ∖ cl(∂σ ∩ ∂τ). Nonempty means the closures meet improperly:
+// ∂(σ ∪ τ) would touch itself at exactly these cells. Local.
 inline Marker excess_intersection(const Complex& c, int k, Index a, Index b) {
   const CommonBoundary shared = common_boundary(c, k, a, b);
   Marker ma(c), mb(c);
@@ -91,8 +81,8 @@ inline Marker excess_intersection(const Complex& c, int k, Index a, Index b) {
   return out;
 }
 
-// The amalgamation verdict: σ ∪ τ is again a k-cell when the common
-// boundary is ball-like and the intersection is proper.
+// σ ∪ τ is a k-cell iff ∂σ ∩ ∂τ is ball-like and the closures meet
+// properly.
 inline bool amalgamates_to_cell(const Complex& c, int k, Index a, Index b) {
   if (!common_boundary(c, k, a, b).acyclic) return false;
   const Marker excess = excess_intersection(c, k, a, b);

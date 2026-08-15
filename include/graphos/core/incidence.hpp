@@ -9,24 +9,20 @@
 
 namespace graphos {
 
-// Unsigned sparse adjacency between two strata, CSR layout.
+// Unsigned incidence between two strata, CSR.
 struct Adjacency {
   std::vector<Index> offsets{0};
   std::vector<Index> indices;
 };
 
-// The transitive incidence I(k, j): for each k-cell, the j-cells of its
-// closure (j < k), its star (j > k), or itself (j == k). This is the
-// operator DoF gathers, NetworkX incidence views, and nfempy's
-// build_graph(dim, codim) sit on.
+// I(k, j): for each k-cell σ, the j-cells of its closure (j < k), of its star
+// (j > k), or σ itself (j = k). Rows are sorted and duplicate-free.
 //
-// Deliberately UNSIGNED: orientation coefficients compose only across
-// single levels (multi-level compositions telescope and cancel — that is
-// d∘d = 0); the signed operators are the one-level ∂_k and δ_k. Rows are
-// sorted and duplicate-free.
+// UNSIGNED by necessity: incidence numbers compose only one level at a time,
+// and a multi-level composite telescopes to 0 by ∂∘∂ = 0. The signed
+// operators are ∂_k and δ_k alone.
 //
-// Local: computed per rank over its own cells (plus ghosts under
-// distribution); no communication is implied.
+// Local: computed per rank over its own cells; no communication implied.
 inline Adjacency incidence(const Complex& c, int k, int j) {
   if (k < 0 || k > c.dim() || j < 0 || j > c.dim()) {
     throw std::invalid_argument("incidence: dimension out of range");
@@ -45,7 +41,7 @@ inline Adjacency incidence(const Complex& c, int k, int j) {
     return out;
   }
 
-  // one-level operators for the traversal direction, gathered once
+  // the one-level operators for the traversal direction, gathered once
   std::vector<CoboundaryOperator> up;
   if (j > k) {
     up.reserve(static_cast<std::size_t>(j - k));
