@@ -1,25 +1,32 @@
 # graphos
 
-A metric-free computational topology engine. The formal specification —
-objects, morphisms, the operation calculus, laws with their witnessing
-tests, and design principles — is in [THEORY.md](THEORY.md). `graphos` manages finite cell
-complexes — cells stratified by dimension, boundary operators ∂_k, chain maps
-— and, eventually, distributed communication maps, completely decoupled from
-physical coordinates, spatial metrics, and mesh geometry. Geometry, metrics,
-Hodge stars, and PDE solvers belong to the companion project `exokalk`.
+A metric-free computational topology engine.
+
+graphos represents a finite stratified signed incidence structure
+C = (N₀, …, N_n ; ∂₁, …, ∂_n) — cell counts per stratum, boundary operators
+∂_k with entries in {−1, 0, +1}, and the chain maps its operations induce. A
+k-cell is an index: no realization, coordinate or metric is stored, and none
+is needed to state or check anything below. Complexes may be
+mixed-dimensional, polytopal, non-regular, non-manifold and non-orientable;
+validity is queried rather than presupposed.
+
+The formal specification — objects, morphisms, the operation calculus, the
+laws and the tests that witness them — is [THEORY.md](THEORY.md). Geometry,
+metrics, Hodge stars and PDE solvers belong to the companion project
+`exokal`.
 
 ## Vocabulary
 
-graphos speaks computational topology:
+The surface, in the vocabulary of THEORY.md:
 
 | Term | Meaning in graphos |
 |---|---|
-| **k-cell** | An abstract topological entity of dimension k; nothing but an index |
-| **complex** | Cell counts per dimension + boundary operators; may be mixed-dimensional (maximal cells in any skeleton) |
-| **boundary operator ∂_k** | Signed CSR matrix from k-cells to (k-1)-cells, entries ±1; `d_squared_is_zero` checks ∂∘∂ = 0 |
-| **attaching a cell** | Adding a k-cell along its boundary chain (`attach_cell`) |
+| **k-cell** | A cell of stratum k; an index, carrying no realization |
+| **complex** | C = (N₀, …, N_n ; ∂₁, …, ∂_n); a chain complex exactly when ∂∘∂ = 0, which `d_squared_is_zero` decides |
+| **boundary operator ∂_k** | ∂_k ∈ {−1, 0, +1}^{N_{k−1} × N_k} in signed CSR; row σ holds the (k−1)-faces τ of σ with [σ : τ] |
+| **attaching a cell** | `attach_cell` — a k-cell along the (k−1)-chain ∂σ, the CW paradigm |
 | **mesh ingestion** | `from_polygons` (vertex cycles), `from_polyhedra` (polygonal face lists — the general polymesh form), `from_edges`, and `from_simplices(d, …)` for d-simplices in ANY dimension (all strata derived, top cells oriented by input-order parity). Deterministic orientation conventions, ∂∘∂ = 0 by construction. Polytopal first: any polygon, any polyhedron, any mix |
-| **chain map** | The output of every operation: where each cell went, with orientation coefficient; cells can be sent to zero |
+| **chain map** | f_* : C_k(C) → C_k(C′), induced on generators by every operation; a generator may be sent to 0 |
 | **coproduct** | `disjoint_union(a, b)` |
 | **quotient** | `quotient(c, identifications)` — glue cells together, orientation flips propagate through stars |
 | **parallel cells** | `find_parallel_cells(c, k)` — cells with equal boundary chains up to a uniform flip |
@@ -33,7 +40,7 @@ graphos speaks computational topology:
 | **lifting identifications** | `lift_identifications(c, vertex_pairs)` — extend a vertex pairing upward through the strata by boundary-chain matching (orientation flips reported); with `quotient`, periodic boundary conditions in two calls |
 | **barycentric subdivision** | `barycentric_subdivision(c)` — the order complex of the face poset: one vertex per cell, one k-simplex per strict chain of k+1 cells. Simplicial output from ANY complex; the carrier map (maximal chain element) is the refinement/prolongation relation, and the SIGNED carrier (incidence product along the flag) is the subdivision chain map — refinement transfers orientation rather than leaving it to the caller |
 | **dual complex** | `dual(frozen)` → `DualView` — the poset order-reversed, zero-copy: dual k-cells are primal (n−k)-cells, ∂^dual_k = δ_{n−k}. The combinatorial half of the DEC dual mesh; exokalk adds geometry via the subdivision |
-| **orientation** | `orient(c)` — propagate a consistent global orientation across top cells (interior facets induced with opposite signs), or report non-orientability; the chain map records the flips for cochain transport |
+| **orientation** | `orient(c, k)` — coherently orients the maximal cells of stratum k, so every interior facet is induced with opposite incidence numbers, or reports non-orientability. The orientation classes are returned: coherence leaves exactly one free sign per class, which only a geometric notion of outward can settle |
 | **Betti numbers (Z₂)** | `betti_numbers_z2(c)` — β_k by boundary-matrix reduction mod 2: components, tunnels, cavities; the dimension counts behind well-posedness of mixed formulations on multiply-connected domains |
 | **manifoldness** | `check_manifold(c)` — necessary conditions with an offending-cell marker: purity, facet coface counts, link connectivity (pinch detection) |
 | **agglomeration** | `agglomerate(c, labels)` — merge top cells into polytopal aggregates (interior facets cancel — inconsistent orientation is detected); the inverse of refinement, for multigrid/multiscale coarse spaces |
@@ -45,7 +52,7 @@ graphos speaks computational topology:
 | **elementary collapse** | `free_faces(c)` (unique coface, single occurrence) and `collapse(c)` — greedy Whitehead collapsing to a free-face-free core; every step a simple homotopy equivalence |
 | **frozen complex** | `freeze(c)` → `FrozenComplex` — the immutable query object: ∂ and δ in device-capable storage (`exec::Array`, the CHAI seam), host row access, kernel views |
 | **star / closure / link** | `FrozenComplex::star/closure/link(k, cell)` — st(σ), cl(σ), lk(σ) = cl(st(σ)) \ st(cl(σ)); the queries NetworkX views will sit on |
-| **marker** | `Marker` — locally-evaluated, collectively-meaningful cell selection (`mark`, `mark_where(k, pred)`); the argument form of every cell-selecting op |
+| **marker** | `Marker` — a selection of cells, evaluated locally and meaningful collectively (`mark`, `mark_where(k, pred)`); the argument form of every operation on a subcomplex |
 | **closed subcomplex** | `subcomplex(c, marker)` — cl(marked): the marked cells with their full closure, extracted as its own complex with both chain maps (parent→sub and the embedding sub→parent). Fracture domains, material regions, boundary complexes, k-skeleta |
 | **facet classification** | `classify_facets(c)` — every (n−1)-cell into exactly one of: free (0 cofaces — detached interface domains), boundary (1 — ∂Ω), interior (2), nonmanifold (3+ — DFN junctions). Compose with `subcomplex` to extract ∂Ω |
 
@@ -211,26 +218,45 @@ Beyond the unit suites:
   per-op wall time and throughput; the numbers behind any performance claim.
 - **Sanitizers**: `-DGRAPHOS_SANITIZE=address,undefined` applies ASan/UBSan
   to everything in the tree.
-- **CI** (`.github/workflows/ci.yml`): Linux gcc Release, Linux clang
-  Debug+sanitizers, macOS Release, and a RAJA-enabled build, on every push
-  and pull request. Portability
-options:
+- **CI** (`.github/workflows/ci.yml`): a `format` check
+  (`clang-format --dry-run --Werror`, version pinned), a dependency-free
+  `baseline` matrix (Linux gcc Release, Linux clang Debug + sanitizers, macOS
+  Release), and four staged jobs that answer whether the *installation* is
+  reliable — `1. tpls` builds camp/RAJA/Umpire/CHAI from source
+  ([scripts/build_tpls.sh](scripts/build_tpls.sh), cached on the script's own
+  hash), `2. library` builds and installs against them, `3. tests` runs ctest
+  and then compiles a fresh consumer against the install alone, and
+  `4. container` runs the same four stages in [Dockerfile](Dockerfile) from a
+  bare image. Each phase is a separate job, so a red run names its cause.
+
+Portability options:
 
 ```bash
 cmake -S . -B build -DGRAPHOS_ENABLE_RAJA=ON -DGRAPHOS_FETCH_TPL=ON
 ```
 
 `GRAPHOS_FETCH_TPL` downloads and builds the third-party libs via
-FetchContent; without it they are located with `find_package`.
+FetchContent; without it they are located with `find_package`. CHAI is
+reached through `find_package` only, so it comes from the Spack environment
+or from `scripts/build_tpls.sh`.
 
 ## Roadmap
 
-1. Kernel-form port of `cut_along` (side labeling as parallel label
-   propagation) and `quotient`; 3D cut coverage (branching fracture tests).
-2. Device execution policies (CUDA/HIP/SYCL) for the bulk kernels, on the
-   frozen storage; CHAI-enabled CI build. Fixed-arity strided storage for
-   single-cell-type complexes.
-4. Python bindings (pybind11) with opaque handles; NetworkX 3.x backend
-   exposing zero-copy structural views.
-5. Distributed layer: global IDs, METIS/ParMETIS partitions, MPI halo
-   exchange.
+Shipped since this list was last written: the Python bindings and the
+NetworkX 3.x backend (§ Python bindings), and the staged installation CI with
+its container (§ Build, test, install).
+
+1. **Kernel form for the remaining operations.** `cut_along` — side labelling
+   as parallel label propagation — and `quotient`, following the
+   mark → cascade → scan → scatter shape `star_deletion` already has. Plus
+   3-dimensional cut coverage, branching interfaces included.
+2. **Device execution.** CUDA/HIP/SYCL policies for the bulk kernels over the
+   frozen storage, and a CHAI-enabled CI build. The operations are written to
+   survive this unchanged; what is missing is the policies and the evidence.
+3. **Fixed-arity strided storage.** A complex of a single cell type needs no
+   offset array, only a stride — the specialization `BoundaryOperator`
+   anticipates.
+4. **Distributed layer.** Global IDs, METIS/ParMETIS partitioning, and MPI
+   halo exchange inside `freeze()` and the operations. The collective
+   contracts in § Collective semantics are already specified for it; today
+   every one of them is the P = 1 case.
