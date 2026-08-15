@@ -64,6 +64,14 @@ jobs:
   # graphos installs with no third-party libraries at all, and that path is
   # what most users take. It is checked first, on three toolchains, and does
   # not wait for anything.
+  #
+  # ONE entry also builds the Python bindings. Nothing else in this workflow
+  # sets GRAPHOS_BUILD_PYTHON, so without it the bindings are never compiled
+  # and `python.test_graphos` / `python.test_networkx` never run -- a binding
+  # can silently stop exposing part of the documented surface and no job goes
+  # red. It is one entry rather than all three: the sanitized build would need
+  # the ASan runtime preloaded into the interpreter, and the point of this job
+  # is to stay fast.
   baseline:
     name: baseline ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
@@ -77,18 +85,21 @@ jobs:
             cxx: g++
             build_type: Release
             sanitize: ""
+            python: "ON"
           - name: linux-clang-sanitize
             os: ubuntu-latest
             cc: clang
             cxx: clang++
             build_type: Debug
             sanitize: address,undefined
+            python: "OFF"
           - name: macos-release
             os: macos-latest
             cc: clang
             cxx: clang++
             build_type: Release
             sanitize: ""
+            python: "OFF"
     env:
       CC: ${{ matrix.cc }}
       CXX: ${{ matrix.cxx }}
@@ -97,15 +108,37 @@ jobs:
       ASAN_OPTIONS: strict_string_checks=1:detect_stack_use_after_return=1
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        id: py
+        if: matrix.python == 'ON'
+        with:
+          python-version: "3.12"
+      - name: python deps
+        # numpy is a hard dependency of the bindings, networkx of the backend
+        # test; the pinned version matches pyproject's networkx>=3.3
+        if: matrix.python == 'ON'
+        run: python -m pip install --upgrade numpy "networkx>=3.3"
       - name: configure
+        # PYTHON_EXECUTABLE is named explicitly so the bindings and the ctest
+        # entries use the interpreter set up above, not whatever the image ships
         run: >
           cmake -S . -B build
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
           -DGRAPHOS_SANITIZE=${{ matrix.sanitize }}
+          -DGRAPHOS_BUILD_PYTHON=${{ matrix.python }}
+          ${{ matrix.python == 'ON' && format('-DPYTHON_EXECUTABLE={0}', steps.py.outputs.python-path) || '' }}
       - name: build
         run: cmake --build build -j 4
       - name: test
         run: ctest --test-dir build --output-on-failure
+      # the bindings are only meaningful if the python entries actually ran:
+      # a missing interpreter would otherwise skip them without failing
+      - name: the python suites really ran
+        if: matrix.python == 'ON'
+        run: |
+          ctest --test-dir build -N | grep -q 'python.test_graphos'
+          ctest --test-dir build -N | grep -q 'python.test_networkx'
+          echo "both python ctest entries are registered and ran above"
       - name: bench smoke
         run: ./build/bench/graphos_bench 8
 

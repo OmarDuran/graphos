@@ -54,7 +54,7 @@ The surface, in the vocabulary of THEORY.md:
 | **star / closure / link** | `FrozenComplex::star/closure/link(k, cell)` — st(σ), cl(σ), lk(σ) = cl(st σ) ∖ st(cl σ), per cell |
 | **marker** | `Marker` — a selection of cells, evaluated locally and meaningful collectively (`mark`, `mark_where(k, pred)`); the argument form of every operation on a subcomplex |
 | **closed subcomplex** | `subcomplex(c, marker)` — cl(S) as its own complex, with both chain maps. Interface domains, material regions, ∂K, and the k-skeleton are all instances |
-| **facet classification** | `classify_facets(c)` — partitions the facets by top-coface count: free (0, a detached interface), boundary (1, ∂K), interior (2), non-manifold (3+, a junction). With `subcomplex` it extracts ∂K |
+| **facet classification** | `classify_facets(c)` — partitions the facets by top-coface count: `maximal` (0, a detached interface — no proper coface, *not* free in the Whitehead sense, which is `free_faces`), `boundary` (1, ∂K), `interior` (2), `nonmanifold` (3+, a junction). With `subcomplex` it extracts ∂K |
 
 A decision that requires geometry — that two vertices are the same point —
 enters as an explicit `Identification`; everything downstream of it is
@@ -130,8 +130,9 @@ Two disciplines follow:
    predicate runs on each rank over its own cells, so the same program text is
    meaningful at any rank count.
 
-`freeze(c, halo_depth)` records the ghost-ring depth (default 1) that Local
-queries are guaranteed correct within.
+`freeze(c)` takes a complex and nothing else. The ghost-ring depth that bounds
+the Local queries is a property of the distributed layer, and arrives as an
+argument when that layer does.
 
 ## Python bindings
 

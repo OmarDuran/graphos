@@ -173,7 +173,6 @@ PYBIND11_MODULE(_core, m) {
   // ---- frozen storage, as zero-copy views -------------------------------
   py::class_<FrozenComplex>(m, "FrozenComplex")
       .def_property_readonly("dim", &FrozenComplex::dim)
-      .def_property_readonly("halo_depth", &FrozenComplex::halo_depth)
       .def("count", &FrozenComplex::count, py::arg("k"))
       .def("counts", &FrozenComplex::counts)
       .def(
@@ -230,7 +229,7 @@ PYBIND11_MODULE(_core, m) {
       .def("star", &FrozenComplex::star, py::arg("k"), py::arg("cell"))
       .def("closure", &FrozenComplex::closure, py::arg("k"), py::arg("cell"))
       .def("link", &FrozenComplex::link, py::arg("k"), py::arg("cell"));
-  m.def("freeze", &freeze, py::arg("complex"), py::arg("halo_depth") = 1);
+  m.def("freeze", &freeze, py::arg("complex"));
 
   py::class_<DualView>(m, "DualView")
       .def_property_readonly("dim", &DualView::dim)
@@ -347,9 +346,15 @@ PYBIND11_MODULE(_core, m) {
   py::class_<OrientationResult>(m, "OrientationResult")
       .def_readonly("complex", &OrientationResult::complex)
       .def_readonly("map", &OrientationResult::map)
-      .def_readonly("orientable", &OrientationResult::orientable);
+      .def_readonly("orientable", &OrientationResult::orientable)
+      .def_readonly("class_of", &OrientationResult::class_of)
+      .def_readonly("classes", &OrientationResult::classes)
+      .def_readonly("stratum", &OrientationResult::stratum);
   // overloaded (explicit stratum and top-stratum default)
-  m.def("orient", static_cast<OrientationResult (*)(const Complex&)>(&orient), py::arg("complex"));
+  m.def("orient", static_cast<OrientationResult (*)(const Complex&, int)>(&orient),
+        py::arg("complex"), py::arg("k"), "Coherently orient the maximal cells of stratum k");
+  m.def("orient", static_cast<OrientationResult (*)(const Complex&)>(&orient), py::arg("complex"),
+        "orient(complex, complex.dim): the top stratum");
 
   py::class_<AgglomerationResult>(m, "AgglomerationResult")
       .def_readonly("complex", &AgglomerationResult::complex)

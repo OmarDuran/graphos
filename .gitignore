@@ -74,5 +74,5 @@ spack.lock
 
 # python binding artifacts
 python/graphos/_core*.so
-python/graphos/__pycache__/
-python/tests/__pycache__/
+# every package dir, so a new subpackage does not leak bytecode into the tree
+__pycache__/

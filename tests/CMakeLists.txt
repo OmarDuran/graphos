@@ -38,6 +38,7 @@ set(GRAPHOS_UNIT_TESTS
   property/test_scaling
   property/test_performance
   property/test_multilevel
+  property/test_compliance
 )
 
 foreach(t IN LISTS GRAPHOS_UNIT_TESTS)

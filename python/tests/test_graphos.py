@@ -146,6 +146,33 @@ def test_exceptions_map_to_python():
         pass
 
 
+def test_orient_surface_matches_the_documented_one():
+    """README documents orient(c, k) and orient().class_of; both must be
+    reachable from Python, not just the top-stratum convenience overload."""
+    square = g.Complex(dim=2)
+    square.attach_vertices(4)
+    for a, b in [(0, 1), (1, 2), (3, 2), (0, 3), (0, 2)]:
+        square.attach_cell(1, [a, b], [-1, +1])
+    square.attach_cell(2, [0, 1, 4], [+1, +1, -1])
+    square.attach_cell(2, [4, 2, 3], [+1, -1, -1])
+
+    # the explicit-stratum overload, and the top-stratum default agreeing with it
+    assert g.orient(square, 2).stratum == 2
+    assert g.orient(square).stratum == square.dim
+
+    # orientation classes are returned, one entry per cell of the stratum
+    top = g.orient(square, 2)
+    assert top.orientable
+    assert top.classes == 1
+    assert len(top.class_of) == square.count(2)
+
+    # cylinder is orientable, Moebius is not (the documented witness)
+    cyl = g.quotient(square, g.lift_identifications(square, [(0, 1, +1), (3, 2, +1)])).complex
+    mob = g.quotient(square, g.lift_identifications(square, [(0, 2, +1), (3, 1, +1)])).complex
+    assert g.orient(cyl, 2).orientable
+    assert not g.orient(mob, 2).orientable
+
+
 def test_chain_map_composition():
     disk = make_disk()
     m = g.Marker(disk)

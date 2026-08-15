@@ -35,15 +35,14 @@ struct CsrView {
 class FrozenComplex {
  public:
   // Under distribution, freezing is where partitioning, ownership and halo
-  // construction happen; halo_depth bounds the neighbourhood st/cl/lk can
-  // answer. At P = 1 the partition is the whole complex and it has no effect.
-  explicit FrozenComplex(const Complex& c, int halo_depth = 1)
+  // construction would happen, and the ghost-ring depth bounding what st/cl/lk
+  // can answer would be settled here. None of that exists; the signature will
+  // grow when the layer that gives it meaning does.
+  explicit FrozenComplex(const Complex& c)
       : dim_(c.dim()),
-        halo_depth_(halo_depth),
         counts_(c.counts()),
         boundary_(static_cast<std::size_t>(c.dim()) + 1),
         coboundary_(static_cast<std::size_t>(c.dim()) + 1) {
-    if (halo_depth < 1) throw std::invalid_argument("FrozenComplex: halo_depth must be >= 1");
     c.validate();
     for (int k = 1; k <= dim_; ++k) {
       const BoundaryOperator& bnd = c.boundary(k);
@@ -71,8 +70,6 @@ class FrozenComplex {
   FrozenComplex& operator=(FrozenComplex&&) = default;
 
   int dim() const { return dim_; }
-
-  int halo_depth() const { return halo_depth_; }
 
   // N_k, global and rank-invariant (P = 1: the local count).
   Index count(int k) const {
@@ -114,8 +111,8 @@ class FrozenComplex {
   // --- closure, star, link -------------------------------------------------
   // Results are per-stratum sorted cell lists, sized dim()+1.
   //
-  // Local: evaluated on the partition plus its ghost ring, correct when the
-  // neighbourhood lies within freeze()'s halo_depth. No communication.
+  // Local: no communication. Under distribution these would be answered on the
+  // partition plus its ghost ring; at P = 1 the partition is the whole complex.
 
   // cl(σ): σ with all its faces, transitively.
   std::vector<std::vector<Index>> closure(int k, Index cell) const {
@@ -194,15 +191,12 @@ class FrozenComplex {
   }
 
   int dim_;
-  int halo_depth_;
   std::vector<Index> counts_;
   std::vector<FrozenCsr> boundary_;    // [k] valid for k >= 1
   std::vector<FrozenCsr> coboundary_;  // [k] valid for k < dim
 };
 
-inline FrozenComplex freeze(const Complex& c, int halo_depth = 1) {
-  return FrozenComplex(c, halo_depth);
-}
+inline FrozenComplex freeze(const Complex& c) { return FrozenComplex(c); }
 
 // The face poset with its order reversed. The dual k-cell is the primal
 // (n−k)-cell — the same index — and ∂^dual_k = δ_{n−k}, so the view is

@@ -16,7 +16,7 @@ struct FacetClassification {
                        // Not free in the Whitehead sense, which requires
                        // exactly one coface (see free_faces in collapse.hpp).
   Marker boundary;     // 1 coface: the topological boundary ∂Ω — the facets
-                       // the facets of ∂K
+                       // of ∂K
   Marker interior;     // 2 cofaces: manifold interior facets
   Marker nonmanifold;  // 3+ cofaces: junction facets (DFN intersections,
                        // T-junctions)

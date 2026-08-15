@@ -13,12 +13,24 @@ set_target_properties(_core PROPERTIES
   LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/graphos)
 
 if(BUILD_TESTING)
+  # pybind11 exports the interpreter as Python_EXECUTABLE under FindPython and
+  # as PYTHON_EXECUTABLE in classic mode (the pinned 2.13.6 uses the latter).
+  # Taking only one of them leaves the test command without an interpreter, so
+  # ctest invokes the .py file itself and reports BAD_COMMAND.
+  set(GRAPHOS_PYTHON "${Python_EXECUTABLE}")
+  if(NOT GRAPHOS_PYTHON)
+    set(GRAPHOS_PYTHON "${PYTHON_EXECUTABLE}")
+  endif()
+  if(NOT GRAPHOS_PYTHON)
+    message(FATAL_ERROR "graphos: python tests requested but no interpreter was resolved")
+  endif()
+
   add_test(NAME python.test_graphos
-           COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_graphos.py)
+           COMMAND ${GRAPHOS_PYTHON} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_graphos.py)
   set_tests_properties(python.test_graphos PROPERTIES
     ENVIRONMENT "PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}")
   add_test(NAME python.test_networkx
-           COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_networkx.py)
+           COMMAND ${GRAPHOS_PYTHON} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_networkx.py)
   set_tests_properties(python.test_networkx PROPERTIES
     ENVIRONMENT "PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}")
 endif()

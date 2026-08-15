@@ -121,13 +121,6 @@ GRAPHOS_TEST(dual_of_dual_rows_match_primal) {
   }
 }
 
-GRAPHOS_TEST(halo_depth_is_recorded_and_validated) {
-  const graphos::Complex c = graphos_test::make_triangle();
-  CHECK(graphos::freeze(c).halo_depth() == 1);
-  CHECK(graphos::freeze(c, 3).halo_depth() == 3);
-  CHECK_THROWS(graphos::freeze(c, 0));
-}
-
 GRAPHOS_TEST(queries_reject_bad_input) {
   const graphos::FrozenComplex f = graphos::freeze(graphos_test::make_triangle());
   CHECK_THROWS(f.closure(3, 0));
