@@ -1,8 +1,8 @@
-// Dimensional-descent coarsening. graphos is metric-free, so it cannot
-// know where a geometric corner is — the TESTS know (they built the
-// structured grids), and they pass that metric knowledge in as protected
-// markers, then assert that graphos's purely combinatorial descent
-// reproduces the exact coarse tensor meshes.
+// Witnesses that dimensional descent inverts tensor refinement. Being
+// metric-free, graphos cannot locate a geometric corner; the tests know it,
+// having built the grids, and supply it as protected markers. What is asserted
+// is that the purely combinatorial descent then reproduces the coarse tensor
+// complexes exactly.
 
 #include <array>
 #include <vector>
@@ -51,8 +51,8 @@ std::vector<Index> hex_parents(int n) {
   return labels;
 }
 
-// METRIC knowledge, supplied as input: the coarse lattice corners of the
-// structured grid (vertices with all-even coordinates)
+// metric input: the coarse lattice corners, the vertices with all-even
+// coordinates
 graphos::Marker quad_corners(const graphos::Complex& c, int n) {
   graphos::Marker m(c);
   for (int i = 0; i <= n; i += 2)
@@ -60,9 +60,9 @@ graphos::Marker quad_corners(const graphos::Complex& c, int n) {
   return m;
 }
 
-// the full coarse lattice FRAME: corner vertices (barriers for the edge
-// chains) and lattice-line edges (barriers for the face patches), decoded
-// from the product layout v = (i*(n+1)+j)*(n+1)+k
+// the coarse lattice frame: corner vertices, barriers for the 1-cell chains,
+// and lattice-line 1-cells, barriers for the 2-cell patches, decoded from the
+// product layout v = (i(n+1)+j)(n+1)+k
 graphos::Marker hex_frame(const graphos::Complex& c, int n) {
   graphos::Marker m(c);
   const auto coords = [n](Index v) {
@@ -74,8 +74,8 @@ graphos::Marker hex_frame(const graphos::Complex& c, int n) {
     for (int j = 0; j <= n; j += 2)
       for (int k = 0; k <= n; k += 2)
         m.mark(0, static_cast<Index>((i * (n + 1) + j) * (n + 1) + k));
-  // an edge lies on a coarse lattice line iff both endpoints share the
-  // same two even coordinates
+  // a 1-cell lies on a lattice line iff its endpoints share the same two even
+  // coordinates
   const graphos::BoundaryOperator& e = c.boundary(1);
   for (Index ed = 0; ed < c.count(1); ++ed) {
     const auto a = coords(e.indices[e.offsets[ed]]);
@@ -95,8 +95,9 @@ void check_arities(const graphos::Complex& c, int k, Index expected) {
 
 }  // namespace
 
-// The full inverse of tensor refinement: with corners protected, the
-// descent reproduces the coarse quad mesh EXACTLY — counts and arities.
+// Witnesses the exact inverse of tensor refinement: with the corners
+// protected, the descent reproduces the coarse complex in every stratum count
+// and boundary arity.
 GRAPHOS_TEST(quad_hierarchy_recovers_true_quads) {
   const graphos::Complex fine = quad_mesh(4);
   const graphos::Complex middle = quad_mesh(2);
@@ -109,8 +110,8 @@ GRAPHOS_TEST(quad_hierarchy_recovers_true_quads) {
   check_arities(co.complex, 2, 4);  // every coarse cell is a TRUE quad
   check_arities(co.complex, 1, 2);
 
-  // and once more down to the single cell (on the independently built
-  // middle mesh, whose layout the metric side knows)
+  // and again down to the single cell, on the independently built middle
+  // complex whose layout the metric side knows
   const auto co2 = graphos::coarsen(middle, {0, 0, 0, 0}, quad_corners(middle, 2));
   co2.complex.validate();
   CHECK(graphos::d_squared_is_zero(co2.complex));
@@ -144,16 +145,16 @@ GRAPHOS_TEST(hex_hierarchy_recovers_true_hexes) {
   check_arities(co2.complex, 2, 4);
 }
 
-// The chain map records the descent: sent to zero interiors go to zero,
-// merged pairs share a coarse id.
+// Witnesses that the chain map records the descent: cells interior to an
+// aggregate are sent to 0 and merged cells share a coarse index.
 GRAPHOS_TEST(chain_map_records_the_descent) {
   const graphos::Complex fine = quad_mesh(2);
   const auto co = graphos::coarsen(fine, {0, 0, 0, 0}, quad_corners(fine, 2));
-  // center vertex (1,1) = index 4 is sent to zero
+  // the interior vertex (1,1) = 4 is sent to 0
   CHECK(co.map.index[0][4] == graphos::invalid_index);
   // the four corners survive
   for (const Index v : {0, 2, 6, 8}) CHECK(co.map.index[0][v] != graphos::invalid_index);
-  // every surviving edge pair shares a coarse edge; coefficients are ±1
+  // each surviving 1-cell pair shares a coarse cell, with coefficients ±1
   for (std::size_t e = 0; e < co.map.index[1].size(); ++e) {
     if (co.map.index[1][e] == graphos::invalid_index) continue;
     CHECK(co.map.sign[1][e] == 1 || co.map.sign[1][e] == -1);
@@ -161,9 +162,9 @@ GRAPHOS_TEST(chain_map_records_the_descent) {
   CHECK(co.complex.count(1) == 4);
 }
 
-// Without protection the merge is maximal — and the domain-boundary cycle
-// patch is REJECTED (a closed coarse edge would have empty boundary), so
-// the fallback keeps the fine boundary cells.
+// Witnesses the maximal merge and its guard: unprotected, the boundary cycle
+// is rejected — a closed coarse cell would have empty boundary — so the
+// fallback keeps the fine cells.
 GRAPHOS_TEST(unprotected_closed_cycle_falls_back_to_singletons) {
   const graphos::Complex fine = quad_mesh(2);
   const auto co = graphos::coarsen(fine, {0, 0, 0, 0});
@@ -175,9 +176,9 @@ GRAPHOS_TEST(unprotected_closed_cycle_falls_back_to_singletons) {
   CHECK(co.complex.count(2) == 1);
 }
 
-// Combinatorial freedom, demonstrated: protecting only two opposite
-// corners yields a legitimate two-edge "bigon" cell — topology alone
-// cannot forbid it, which is exactly why corners are caller input.
+// Witnesses that topology alone cannot forbid a bigon: protecting two opposite
+// corners yields a legitimate coarse cell with two faces, which is why the
+// corners must be caller input.
 GRAPHOS_TEST(two_protected_corners_make_a_bigon) {
   const graphos::Complex fine = quad_mesh(2);
   graphos::Marker two(fine);
@@ -191,8 +192,8 @@ GRAPHOS_TEST(two_protected_corners_make_a_bigon) {
   CHECK(co.complex.count(2) == 1);
 }
 
-// Mixed-dimensional passthrough: maximal lower-dimensional cells (a
-// detached segment) survive the descent untouched.
+// Witnesses mixed-dimensional passthrough: a maximal lower-dimensional cell
+// survives the descent untouched.
 GRAPHOS_TEST(detached_cells_pass_through) {
   graphos::Complex c(2);
   c.attach_vertices(5);

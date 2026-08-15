@@ -66,11 +66,11 @@ GRAPHOS_TEST(factors_embed_as_subcomplexes) {
   const graphos::Complex a = graphos_test::make_segment();
   const graphos::Complex b = make_circle();
   const auto j = graphos::join(a, b);
-  // A occupies the leading indices, B follows
+  // A holds the leading indices, B follows
   CHECK(j.a_map.index[1][0] == 0);
   CHECK(j.b_map.index[0][0] == a.count(0));
   CHECK(j.b_map.index[1][0] == a.count(1));
-  // B's embedded edge references B's embedded vertices
+  // B's embedded 1-cell references B's embedded vertices
   const graphos::BoundaryOperator& e = j.complex.boundary(1);
   const Index be = j.b_map.index[1][0];
   CHECK(e.indices[e.offsets[be]] == j.b_map.index[0][0]);

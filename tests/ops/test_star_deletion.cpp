@@ -3,8 +3,9 @@
 #include "graphos/ops/star_deletion.hpp"
 #include "graphos_test.hpp"
 
-// Deleting the star of one apex of a two-triangle disk sweeps out its two
-// private edges and its 2-cell, leaving a single triangle.
+// Witnesses that st(σ) is removed with its cascade: deleting the star of one
+// apex of the disk sweeps out its two private 1-cells and its 2-cell, leaving
+// a single 2-cell.
 GRAPHOS_TEST(apex_star_deletion_leaves_one_triangle) {
   const graphos::Complex c = graphos_test::make_two_triangle_disk();
   graphos::Marker apex(c);
@@ -18,7 +19,7 @@ GRAPHOS_TEST(apex_star_deletion_leaves_one_triangle) {
   CHECK(graphos::d_squared_is_zero(sd.complex));
   CHECK(graphos::euler_characteristic(sd.complex) == 1);
 
-  // casualties: the apex, its two edges, B's face; everything else survives
+  // removed: the apex, its two 1-cells and B's 2-cell
   CHECK(sd.map.index[0][3] == graphos::invalid_index);
   CHECK(sd.map.index[1][3] == graphos::invalid_index);
   CHECK(sd.map.index[1][4] == graphos::invalid_index);
@@ -30,8 +31,8 @@ GRAPHOS_TEST(apex_star_deletion_leaves_one_triangle) {
   CHECK(sd.map.index[2][0] == 0);
 }
 
-// Same deletion built through a pushout: chain maps must compose so that all
-// of A survives and B's share of the interface persists with its flip.
+// Witnesses that the chain maps compose across operations: the same deletion
+// on a pushout leaves all of A, and B's share of the interface with its flip.
 GRAPHOS_TEST(chain_maps_compose_across_pushout_and_deletion) {
   const graphos::Complex a = graphos_test::make_triangle();
   const graphos::Complex b = graphos_test::make_triangle();
@@ -55,14 +56,14 @@ GRAPHOS_TEST(chain_maps_compose_across_pushout_and_deletion) {
   CHECK(b_final.index[1][1] == graphos::invalid_index);
   CHECK(b_final.index[1][2] == graphos::invalid_index);
   CHECK(b_final.index[2][0] == graphos::invalid_index);
-  // ...but B's share of the interface persists, with the flip preserved
+  // B's share of the interface persists, with the flip
   CHECK(b_final.index[0][0] != graphos::invalid_index);
   CHECK(b_final.index[1][0] != graphos::invalid_index);
   CHECK(b_final.sign[1][0] == -1);
 }
 
 GRAPHOS_TEST(deleting_a_maximal_lower_cell_keeps_its_faces) {
-  // mixed-dimensional: a bare segment; deleting the edge keeps its vertices
+  // mixed-dimensional: deleting a maximal 1-cell keeps its vertices
   const graphos::Complex c = graphos_test::make_segment();
   const auto sd = graphos::star_deletion(c, graphos::Marker::from_cells(c, {{}, {0}}));
   CHECK(sd.complex.count(0) == 2);  // orphan pruning is a caller decision

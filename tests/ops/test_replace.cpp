@@ -1,16 +1,12 @@
-// Incremental imprinting with replace(), simulated as a 2D cut-cell
-// workflow. ALL metric content lives in this test — the line inclination,
-// the intersection points, the trapezoid areas, and the bad-cut rule
-// (area < 1/3 of the quad) — and enters graphos only as markers, patches,
-// and glue. graphos does the topology: excision + amalgamation, side
-// classification, healing by agglomeration, and the invariant checks.
+// Witnesses that excision and amalgamation compose into imprinting: replace()
+// followed by agglomerate() preserves ∂∘∂ = 0, conformity of the interface,
+// and the chain maps that transport cochains across both.
 //
-// Scenario: 3x3 unit-quad mesh, vertices (x, y) = (i, j), cut by the line
-//   y = 1.2 + 0.2 x
-// which crosses the middle row, splitting each of its quads into a lower
-// and an upper trapezoid with areas 0.3/0.5/0.7 and 0.7/0.5/0.3. The two
-// area-0.3 pieces are bad cuts and are healed into their same-side
-// neighbors below/above.
+// Every metric quantity — the line, the intersection points, the areas, the
+// rule area < 1/3 — lives in the test and reaches graphos only as markers,
+// patches and glue. The complex is a 3×3 quad mesh cut by y = 1.2 + 0.2x,
+// which splits each middle-row 2-cell into trapezoids of area 0.3/0.5/0.7 and
+// 0.7/0.5/0.3; the two smallest are healed into their same-side neighbours.
 
 #include <vector>
 
@@ -33,8 +29,8 @@ graphos::Complex path(int n) {
   return graphos::from_edges(n + 1, segs);
 }
 
-// product layout: vertex (i,j) = i*4+j; vertical edge at x=i, y∈[j,j+1] is
-// i*3+j; horizontal edge y=j, x∈[i,i+1] is 12+i*4+j; quad (i,j) = i*3+j
+// product layout: vertex (i,j) = 4i+j; the 1-cell at x = i over y ∈ [j, j+1]
+// is 3i+j; the one at y = j over x ∈ [i, i+1] is 12+4i+j; the 2-cell is 3i+j
 graphos::Complex quad_mesh_3x3() {
   const graphos::Complex p = path(3);
   return graphos::product(p, p).complex;
@@ -42,14 +38,15 @@ graphos::Complex quad_mesh_3x3() {
 
 }  // namespace
 
-// Sanity: replace one face of the two-triangle disk with a 3-triangle fan
-// over a new center vertex; the frontier edges are reused via lifted glue.
+// Witnesses that the glue lifts: replacing one 2-cell of the disk by a fan of
+// three over a new vertex reuses the frontier 1-cells through the lifted
+// vertex correspondence, rather than duplicating them.
 GRAPHOS_TEST(replace_face_with_fan) {
   const graphos::Complex disk = graphos_test::make_two_triangle_disk();
   graphos::Marker region(disk);
   region.mark(2, 1);  // face B only; its edges survive as the frontier
 
-  // patch: fan over B's triangle (vertices 0,1,3 -> patch 0,1,2; center 3)
+  // patch: a fan over B's 2-cell (vertices 0,1,3 → 0,1,2; apex 3)
   const graphos::Complex fan = graphos::from_simplices(2, 4, {{0, 1, 3}, {1, 2, 3}, {2, 0, 3}});
   const auto r = graphos::replace(disk, region, fan, {{0, 0, +1}, {1, 1, +1}, {2, 3, +1}});
   r.complex.validate();
@@ -72,21 +69,20 @@ GRAPHOS_TEST(glue_into_excised_region_throws) {
   CHECK_THROWS(graphos::replace(disk, region, patch, {{0, 99, +1}}));
 }
 
-// The cut-cell scenario, end to end.
+// The imprint, end to end.
 GRAPHOS_TEST(inclined_cut_imprint_and_bad_cut_healing) {
   const graphos::Complex host = quad_mesh_3x3();
 
-  // --- metric side: the line y = 1.2 + 0.2x crosses the middle row,
-  // cutting the vertical edges at x = 0..3; no horizontal edge is crossed
-  // --- topology side: the region is the middle-row quads and the crossed
-  // vertical edges (their stars are exactly those quads)
+  // metric: y = 1.2 + 0.2x crosses the middle row, cutting the 1-cells at
+  // x = 0..3 and no others
+  // topology: the region is the middle-row 2-cells with the cut 1-cells,
+  // whose stars are exactly those 2-cells
   graphos::Marker region(host);
   for (Index i = 0; i < 3; ++i) region.mark(2, i * 3 + 1);  // quads (i,1)
   for (Index i = 0; i < 4; ++i) region.mark(1, i * 3 + 1);  // vertical edges at row 1
 
-  // the imprinted patch for the swath y∈[1,2]: bottom vertices b_i (0..3),
-  // top t_i (4..7), cut points p_i (8..11); three lower and three upper
-  // trapezoids, wound CCW
+  // the patch over y ∈ [1,2]: bottom vertices 0..3, top 4..7, cut points
+  // 8..11; three lower and three upper 2-cells, coherently wound
   const graphos::Complex patch = graphos::from_polygons(12, {{0, 1, 9, 8},
                                                              {1, 2, 10, 9},
                                                              {2, 3, 11, 10},  // lower pieces
@@ -94,7 +90,7 @@ GRAPHOS_TEST(inclined_cut_imprint_and_bad_cut_healing) {
                                                              {9, 10, 6, 5},
                                                              {10, 11, 7, 6}});  // upper pieces
 
-  // glue: patch bottom/top rows onto the surviving host lattice rows
+  // glue: the patch's bottom and top rows onto the surviving host rows
   std::vector<graphos::Identification> glue;
   for (Index i = 0; i <= 3; ++i) {
     glue.push_back({i, i * 4 + 1, +1});      // b_i -> (i, 1)
@@ -111,8 +107,8 @@ GRAPHOS_TEST(inclined_cut_imprint_and_bad_cut_healing) {
   for (Index i = 0; i < 3; ++i) CHECK(imprint.map.index[2][i * 3 + 1] == graphos::invalid_index);
   for (Index i = 0; i < 4; ++i) CHECK(imprint.map.index[1][i * 3 + 1] == graphos::invalid_index);
 
-  // the fault topology: the three cut edges (both endpoints are cut
-  // points), located combinatorially in the patch and transported
+  // the interface: the three 1-cells with both endpoints cut points, located
+  // combinatorially in the patch and transported through the chain map
   graphos::Marker interface(imprint.complex);
   const graphos::BoundaryOperator& pe = patch.boundary(1);
   for (Index e = 0; e < patch.count(1); ++e) {
@@ -120,17 +116,16 @@ GRAPHOS_TEST(inclined_cut_imprint_and_bad_cut_healing) {
     if (cut_edge) interface.mark(1, imprint.patch_map.index[1][e]);
   }
   CHECK(interface.marked_count(1) == 3);
-  // conformity: every cut edge separates exactly two cells
+  // conformity: each interface 1-cell has exactly two cofaces
   const graphos::CoboundaryOperator cob = graphos::coboundary(imprint.complex, 1);
   for (Index e = 0; e < imprint.complex.count(1); ++e) {
     if (interface.marked(1, e)) CHECK(cob.offsets[e + 1] - cob.offsets[e] == 2);
   }
 
-  // --- metric side: piece areas from the trapezoid formula
-  // lower: 0.3, 0.5, 0.7   upper: 0.7, 0.5, 0.3  -> bad = area < 1/3
+  // metric: areas 0.3/0.5/0.7 below and 0.7/0.5/0.3 above; bad is < 1/3
   const double lower_area[3] = {0.3, 0.5, 0.7};
   const double upper_area[3] = {0.7, 0.5, 0.3};
-  // result-cell areas, indexed by result id
+  // areas indexed by result cell
   std::vector<double> area(12, 0.0);
   std::vector<Index> host_res(9, graphos::invalid_index);
   for (Index q = 0; q < 9; ++q) {
@@ -145,11 +140,11 @@ GRAPHOS_TEST(inclined_cut_imprint_and_bad_cut_healing) {
     area[upper_res[i]] = upper_area[i];
   }
 
-  // sides: excluding the cut edges as connectors separates below from above
+  // sides: removing the interface as connectors separates below from above
   const auto sides = graphos::connected_components(imprint.complex, 2, 1, interface);
   CHECK(sides.count == 2);
-  // healing policy (metric): each bad piece merges into the host quad
-  // across its unsplit horizontal edge — same side, verified topologically
+  // healing (metric): each bad cell merges across its unsplit 1-cell into the
+  // neighbour on the same side, which is checked topologically
   CHECK(sides.label[lower_res[0]] == sides.label[host_res[0]]);  // (0,0) below
   CHECK(sides.label[upper_res[2]] == sides.label[host_res[8]]);  // (2,2) above
   CHECK(sides.label[lower_res[0]] != sides.label[upper_res[2]]);
@@ -158,7 +153,7 @@ GRAPHOS_TEST(inclined_cut_imprint_and_bad_cut_healing) {
   for (Index r = 0; r < 12; ++r) labels[r] = r;
   labels[lower_res[0]] = labels[host_res[0]];
   labels[upper_res[2]] = labels[host_res[8]];
-  // compact label ids
+  // compact the labels
   {
     std::vector<Index> remap(12, graphos::invalid_index);
     Index next = 0;
@@ -176,13 +171,13 @@ GRAPHOS_TEST(inclined_cut_imprint_and_bad_cut_healing) {
   CHECK(graphos::euler_characteristic(healed.complex) == 1);
   CHECK(healed.complex.count(2) == 10);  // 12 cells - 2 merges
 
-  // metric verdict: every healed cell now has area >= 1/3
+  // metric: every healed cell has area ≥ 1/3
   std::vector<double> healed_area(10, 0.0);
   for (Index r = 0; r < 12; ++r) healed_area[labels[r]] += area[r];
   for (const double a : healed_area) CHECK(a > 1.0 / 3.0 - 1e-12);
 
-  // the merged cells are hexagon-shaped (4 + 4 - 2 shared); the fault
-  // edges survive the healing untouched
+  // a merged cell has six faces (4 + 4 − 2 cancelled) and the interface
+  // survives the agglomeration
   const graphos::BoundaryOperator& hb = healed.complex.boundary(2);
   const Index m1 = healed.map.index[2][lower_res[0]];
   const Index m2 = healed.map.index[2][upper_res[2]];

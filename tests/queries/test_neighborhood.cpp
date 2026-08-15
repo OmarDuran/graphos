@@ -31,7 +31,7 @@ GRAPHOS_TEST(link_and_frontier_agree_for_a_vertex) {
   s.mark(0, 4);
   const graphos::Marker lk = graphos::link_of(c, s);
   const graphos::Marker fr = graphos::frontier_of(c, s);
-  // both are the boundary square: 4 corners + 4 boundary edges
+  // both are the boundary cycle: four vertices and four 1-cells
   for (int k = 0; k <= 2; ++k) {
     for (Index i = 0; i < c.count(k); ++i) {
       CHECK(lk.marked(k, i) == fr.marked(k, i));
@@ -46,10 +46,10 @@ GRAPHOS_TEST(link_and_frontier_differ_for_a_top_cell) {
   const graphos::Complex c = graphos_test::make_two_triangle_disk();
   graphos::Marker s(c);
   s.mark(2, 0);  // face A
-  // the link of a top cell is empty...
+  // lk(σ) is empty for a top cell ...
   const graphos::Marker lk = graphos::link_of(c, s);
   for (int k = 0; k <= 2; ++k) CHECK(lk.marked_count(k) == 0);
-  // ...but its excision frontier is its boundary
+  // ... but its frontier is ∂σ
   const graphos::Marker fr = graphos::frontier_of(c, s);
   CHECK(fr.marked_count(0) == 3);
   CHECK(fr.marked_count(1) == 3);

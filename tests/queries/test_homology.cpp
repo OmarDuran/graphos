@@ -68,7 +68,7 @@ GRAPHOS_TEST(moebius_band_retracts_to_a_circle) {
 }
 
 GRAPHOS_TEST(relative_betti_of_disk_mod_boundary_is_a_sphere) {
-  // H_k(D², S¹; Z₂) ≅ H̃_k(S²): one class in top dimension
+  // H_k(D², S¹; Z₂) ≅ H̃_k(S²): one class in the top dimension
   const graphos::Complex c = graphos_test::make_two_triangle_disk();
   const auto rel = graphos::betti_numbers_z2(c, graphos::classify_facets(c).boundary);
   CHECK(rel == (std::vector<Index>{0, 0, 1}));
@@ -79,18 +79,18 @@ GRAPHOS_TEST(relative_betti_with_empty_subcomplex_is_absolute) {
   CHECK(graphos::betti_numbers_z2(c, graphos::Marker(c)) == graphos::betti_numbers_z2(c));
 }
 
-// The excision isomorphism H_k(K, cl(st S)) ≅ H_k(K ∖ st S, frontier(S)),
-// both sides computed independently.
+// Witnesses excision: H_k(K, cl(st S)) ≅ H_k(K ∖ st S, frontier(S)), with the
+// two sides computed independently.
 GRAPHOS_TEST(excision_isomorphism_holds) {
   const graphos::Complex c = graphos_test::make_two_triangle_disk();
   graphos::Marker s(c);
   s.mark(2, 0);  // excise face A
 
-  // left side: relative to the closed star, on the full complex
+  // left: relative to cl(st S) on the full complex
   const auto lhs = graphos::betti_numbers_z2(c, graphos::star_of(c, s));
 
-  // right side: excise, then relative to the frontier (transported through
-  // the deletion's chain map)
+  // right: excise, then relative to the frontier, transported through the
+  // deletion's chain map
   const graphos::Marker frontier = graphos::frontier_of(c, s);
   const auto excised = graphos::star_deletion(c, s);
   graphos::Marker frontier_after(excised.complex);

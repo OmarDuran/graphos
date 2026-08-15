@@ -4,13 +4,12 @@
 #include "graphos/ops/cut.hpp"
 #include "graphos_test.hpp"
 
-// Cut a two-triangle disk along the shared edge. The interface spans the
-// whole domain (both endpoints reach the boundary), so the edge AND both
-// endpoints split two ways: the bulk separates into two disjoint triangles
-// and the original interface cells survive as a detached segment.
+// Witnesses the through-cut: the interface reaches ∂K at both endpoints, so
+// the 1-cell and both vertices split two ways. The bulk separates into two
+// disjoint disks and cl(S) survives as a detached 1-dimensional subcomplex.
 GRAPHOS_TEST(through_cut_separates_bulk_and_detaches_interface) {
   const graphos::Complex c = graphos_test::make_two_triangle_disk();
-  // predicate-marked interface: the distribution-stable selection form
+  // the interface, marked by predicate: the rank-independent selection form
   graphos::Marker interface(c);
   interface.mark_where(1, [](graphos::Index i) { return i == 0; });
   const auto cut = graphos::cut_along(c, interface);
@@ -20,11 +19,10 @@ GRAPHOS_TEST(through_cut_separates_bulk_and_detaches_interface) {
   CHECK(cut.complex.count(1) == 7);  // 5 originals + 2 copies of e0
   CHECK(cut.complex.count(2) == 2);
   CHECK(graphos::d_squared_is_zero(cut.complex));
-  // two disjoint triangle disks + one detached segment
+  // two disjoint disks and one detached segment
   CHECK(graphos::euler_characteristic(cut.complex) == 3);
 
-  // ancestry: copies descend from the interface closure, originals from
-  // themselves
+  // ancestry: a copy descends from cl(S), an original from itself
   CHECK(cut.ancestor.index[1][5] == 0);
   CHECK(cut.ancestor.index[1][6] == 0);
   CHECK(cut.ancestor.index[0][4] == 0);
@@ -33,8 +31,8 @@ GRAPHOS_TEST(through_cut_separates_bulk_and_detaches_interface) {
   CHECK(cut.ancestor.index[0][7] == 1);
   CHECK(cut.ancestor.index[2][0] == 0);
 
-  // the two 2-cells reference DIFFERENT copies of the interface edge, and
-  // nothing references the original anymore
+  // the two 2-cells reference distinct copies of the interface 1-cell, and
+  // nothing references the original
   const graphos::BoundaryOperator& f = cut.complex.boundary(2);
   bool original_referenced = false;
   std::vector<graphos::Index> interface_refs;
@@ -49,10 +47,9 @@ GRAPHOS_TEST(through_cut_separates_bulk_and_detaches_interface) {
   CHECK(interface_refs[0] != interface_refs[1]);
 }
 
-// Cut one spoke of a 4-triangle fan around a center vertex. The interface
-// ends at the center, so the center is a tip: the bulk stays connected
-// around it and it must NOT be duplicated, while the outer endpoint (on the
-// domain boundary) splits.
+// Witnesses the crack front: the interface terminates at the interior vertex,
+// which therefore has one side and is not copied, while its outer endpoint on
+// ∂K splits. The bulk stays connected around the tip.
 GRAPHOS_TEST(tip_vertex_is_not_duplicated) {
   const graphos::Complex c = graphos_test::make_fan();
   c.validate();
@@ -65,10 +62,10 @@ GRAPHOS_TEST(tip_vertex_is_not_duplicated) {
   CHECK(cut.complex.count(1) == 10);  // s0 gets two copies
   CHECK(cut.complex.count(2) == 4);
   CHECK(graphos::d_squared_is_zero(cut.complex));
-  // disk with an attached whisker (interface hangs on the tip): contractible
+  // a disk with a whisker attached at the tip: contractible
   CHECK(graphos::euler_characteristic(cut.complex) == 1);
 
-  // both copies of the spoke still reach the ORIGINAL center vertex
+  // both copies of the spoke still reach the original interior vertex
   const graphos::BoundaryOperator& e = cut.complex.boundary(1);
   for (graphos::Index copy = 8; copy <= 9; ++copy) {
     CHECK(cut.ancestor.index[1][copy] == 0);
@@ -78,7 +75,7 @@ GRAPHOS_TEST(tip_vertex_is_not_duplicated) {
     }
     CHECK(touches_center);
   }
-  // exactly two distinct spoke copies are referenced by the bulk
+  // the bulk references exactly two distinct copies of the spoke
   const graphos::BoundaryOperator& f = cut.complex.boundary(2);
   std::vector<graphos::Index> spoke_refs;
   for (graphos::Index t = 0; t < cut.complex.count(2); ++t) {

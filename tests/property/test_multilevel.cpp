@@ -1,15 +1,14 @@
-// Multilevel hierarchy: three levels of structured quadrilateral (2D) and
-// hexahedral (3D) meshes — coarse (1 cell), middle, fine — built by tensor
-// refinement (product of path complexes), with the topological connection
-// across levels ASSERTED through agglomeration:
+// Witnesses that agglomeration realizes the multilevel hierarchy on three
+// levels of tensor-refined complexes (products of path complexes), in
+// dimension 2 and 3:
 //
 //  - agglomerating the fine level by parent labels reproduces the middle
-//    level's top-cell structure (counts, χ, ∂∘∂, aggregated boundary
-//    arity), with the surviving skeleton being the refined middle skeleton;
-//  - every surviving interface facet connects aggregates that correspond
-//    exactly to the parents of its fine cofaces (the seam check);
-//  - coarsening level-by-level equals coarsening in one step: the composed
-//    chain maps are identical to the direct one, element by element.
+//    level's top stratum — counts, χ, ∂∘∂ = 0, boundary arity — over the
+//    refined middle skeleton;
+//  - every surviving interface facet joins the aggregates that are exactly
+//    the parents of its fine cofaces;
+//  - the composite of the level-by-level chain maps equals the one-step map,
+//    entry by entry.
 
 #include <algorithm>
 #include <vector>
@@ -37,8 +36,8 @@ graphos::Complex hex_mesh(int n) {
   return graphos::product(quad_mesh(n), p).complex;
 }
 
-// product layout is i-major, so quad (i,j) has index i*n+j and hex (i,j,k)
-// has index (i*n+j)*n+k; the parent halves each coordinate
+// the product layout is i-major, so a 2-cell (i,j) has index in+j and a
+// 3-cell (i,j,k) has (in+j)n+k; the parent halves each coordinate
 std::vector<Index> quad_parents(int n) {
   std::vector<Index> labels(static_cast<std::size_t>(n) * n);
   for (int i = 0; i < n; ++i)
@@ -63,8 +62,8 @@ void check_level(const graphos::Complex& c) {
   CHECK(graphos::euler_characteristic(c) == 1);
 }
 
-// the seam check: each surviving facet's aggregated cofaces are exactly the
-// parents of its fine cofaces
+// each surviving facet's aggregated cofaces are exactly the parents of its
+// fine cofaces
 void check_seams(const graphos::Complex& fine, const graphos::AgglomerationResult& agg,
                  const std::vector<Index>& parents) {
   const int n = fine.dim();
@@ -110,21 +109,21 @@ GRAPHOS_TEST(quad_hierarchy_three_levels) {
   CHECK(middle.count(2) == 4);
   CHECK(fine.count(2) == 16);
 
-  // fine -> middle: 4 aggregates over the refined middle skeleton
+  // fine → middle: four aggregates over the refined middle skeleton
   const auto parents = quad_parents(4);
   const auto a1 = graphos::agglomerate(fine, parents);
   check_level(a1.complex);
   CHECK(a1.complex.count(2) == middle.count(2));
   CHECK(a1.complex.count(1) == 24);  // 12 middle edges, each two fine edges
   CHECK(a1.complex.count(0) == 21);  // 25 fine vertices minus 4 cell centers
-  // every aggregated quad is bounded by 8 fine edges (2 per side)
+  // each aggregated 2-cell is bounded by eight fine 1-cells, two per side
   const graphos::BoundaryOperator& b1 = a1.complex.boundary(2);
   for (Index e = 0; e < a1.complex.count(2); ++e) {
     CHECK(b1.offsets[e + 1] - b1.offsets[e] == 8);
   }
   check_seams(fine, a1, parents);
 
-  // middle(-equivalent) -> coarse: all four aggregates merge into one
+  // middle → coarse: the four aggregates merge into one
   const std::vector<Index> to_one(4, 0);
   const auto a2 = graphos::agglomerate(a1.complex, to_one);
   check_level(a2.complex);
@@ -132,7 +131,7 @@ GRAPHOS_TEST(quad_hierarchy_three_levels) {
   const graphos::BoundaryOperator& b2 = a2.complex.boundary(2);
   CHECK(b2.offsets[1] - b2.offsets[0] == 16);  // the fine domain boundary
 
-  // level-by-level equals one-step: identical chain maps
+  // level-by-level equals one step: the chain maps agree
   const std::vector<Index> all_zero(16, 0);
   const auto direct = graphos::agglomerate(fine, all_zero);
   CHECK(direct.complex.count(0) == a2.complex.count(0));
@@ -156,7 +155,7 @@ GRAPHOS_TEST(hex_hierarchy_three_levels) {
   CHECK(fine.count(1) == 300);
   CHECK(fine.count(2) == 240);
 
-  // fine -> middle: 8 aggregates over the refined middle skeleton
+  // fine → middle: eight aggregates over the refined middle skeleton
   const auto parents = hex_parents(4);
   const auto a1 = graphos::agglomerate(fine, parents);
   check_level(a1.complex);
@@ -164,14 +163,14 @@ GRAPHOS_TEST(hex_hierarchy_three_levels) {
   CHECK(a1.complex.count(2) == 144);  // 36 middle faces, each four fine faces
   CHECK(a1.complex.count(1) == 252);  // refined middle skeleton edges
   CHECK(a1.complex.count(0) == 117);  // 125 minus 8 cell centers
-  // every aggregated hex is bounded by 24 fine faces (4 per side)
+  // each aggregated 3-cell is bounded by 24 fine 2-cells, four per side
   const graphos::BoundaryOperator& b1 = a1.complex.boundary(3);
   for (Index e = 0; e < a1.complex.count(3); ++e) {
     CHECK(b1.offsets[e + 1] - b1.offsets[e] == 24);
   }
   check_seams(fine, a1, parents);
 
-  // -> coarse, and level-by-level equals one-step
+  // → coarse, and level-by-level equals one step
   const std::vector<Index> to_one(8, 0);
   const auto a2 = graphos::agglomerate(a1.complex, to_one);
   check_level(a2.complex);

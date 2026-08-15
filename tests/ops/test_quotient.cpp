@@ -23,7 +23,7 @@ GRAPHOS_TEST(cyclic_identifications_throw) {
 }
 
 GRAPHOS_TEST(quotient_rewrites_boundary_through_vertex_gluing) {
-  // glue segment [0,1] and segment [2,3] end to end: 1 ~ 2
+  // identify the 1-cells [0,1] and [2,3] end to end: 1 ~ 2
   graphos::Complex c(1);
   c.attach_vertices(4);
   c.attach_cell(1, {0, 1}, {-1, +1});

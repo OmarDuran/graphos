@@ -4,8 +4,8 @@
 
 namespace graphos_test {
 
-// Oriented triangle: edges e0=[0,1], e1=[1,2], e2=[2,0]; the 2-cell is
-// attached along the cycle e0 + e1 + e2.
+// A coherently oriented 2-cell: 1-cells e0=[0,1], e1=[1,2], e2=[2,0], attached
+// along the cycle e0 + e1 + e2.
 inline graphos::Complex make_triangle() {
   graphos::Complex c(2);
   c.attach_vertices(3);
@@ -16,7 +16,7 @@ inline graphos::Complex make_triangle() {
   return c;
 }
 
-// Oriented segment: two vertices, one edge.
+// A 1-complex: two vertices, one 1-cell.
 inline graphos::Complex make_segment() {
   graphos::Complex c(1);
   c.attach_vertices(2);
@@ -24,9 +24,8 @@ inline graphos::Complex make_segment() {
   return c;
 }
 
-// Disk made of two triangles sharing edge e0=[0,1]:
-// A over vertex 2 (edges e0, e1=[1,2], e2=[2,0]),
-// B over vertex 3 (edges e0, e3=[1,3], e4=[3,0]).
+// A disk of two 2-cells sharing e0=[0,1]: A over vertex 2 (e0, e1=[1,2],
+// e2=[2,0]) and B over vertex 3 (e0, e3=[1,3], e4=[3,0]).
 inline graphos::Complex make_two_triangle_disk() {
   graphos::Complex c(2);
   c.attach_vertices(4);
@@ -40,9 +39,8 @@ inline graphos::Complex make_two_triangle_disk() {
   return c;
 }
 
-// Square fan: corners 0..3, center 4, four triangles around the center.
-// Edges: spokes s0=[0,4](0) .. s3=[3,4](3), boundary b01(4), b12(5),
-// b23(6), b30(7).
+// A fan: corners 0..3 about an interior vertex 4, four 2-cells. Spokes
+// s0=[0,4](0)..s3=[3,4](3), boundary b01(4), b12(5), b23(6), b30(7).
 inline graphos::Complex make_fan() {
   graphos::Complex c(2);
   c.attach_vertices(5);

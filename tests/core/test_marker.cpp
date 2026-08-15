@@ -21,7 +21,7 @@ GRAPHOS_TEST(mark_and_query) {
 GRAPHOS_TEST(mark_where_predicate) {
   const graphos::Complex c = graphos_test::make_fan();
   Marker m(c);
-  // the distribution-stable form: a locally evaluated predicate
+  // the rank-independent form: a locally evaluated predicate
   m.mark_where(1, [](Index i) { return i < 4; });  // the four spokes
   CHECK(m.marked_count(1) == 4);
   CHECK(m.marked(1, 3));

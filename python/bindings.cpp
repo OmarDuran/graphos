@@ -1,9 +1,9 @@
 // graphos Python bindings (graphos._core).
 //
-// Lifetime discipline mirrors the builder/frozen split: accessors on the
-// mutable Complex (and on operation results) return NumPy COPIES — safe
-// against reallocation; accessors on the immutable FrozenComplex return
-// ZERO-COPY views whose base object keeps the frozen complex alive.
+// Lifetime follows the builder/frozen split: accessors on the mutable Complex,
+// and on operation results, return NumPy copies, safe against reallocation;
+// accessors on the immutable FrozenComplex return zero-copy views whose base
+// object keeps the complex alive.
 
 #include <pybind11/functional.h>
 #include <pybind11/numpy.h>
@@ -68,7 +68,7 @@ PYBIND11_MODULE(_core, m) {
   m.doc() = "graphos: a metric-free computational topology engine";
   m.attr("INVALID_INDEX") = invalid_index;
 
-  // ---- core -----------------------------------------------------------
+  // ---- the complex and its operators -----------------------------------
   py::class_<Complex>(m, "Complex")
       .def(py::init<int>(), py::arg("dim"))
       .def("attach_vertices", &Complex::attach_vertices, py::arg("n"))
@@ -134,13 +134,13 @@ PYBIND11_MODULE(_core, m) {
           py::arg("k"));
   m.def("compose", [](const ChainMap& a, const ChainMap& b) { return compose(a, b); });
 
-  // ---- constructors ---------------------------------------------------
+  // ---- constructors -----------------------------------------------------
   m.def("from_edges", &from_edges, py::arg("n_vertices"), py::arg("segments"));
   m.def("from_polygons", &from_polygons, py::arg("n_vertices"), py::arg("polygons"));
   m.def("from_polyhedra", &from_polyhedra, py::arg("n_vertices"), py::arg("cells"));
   m.def("from_simplices", &from_simplices, py::arg("dim"), py::arg("n_vertices"), py::arg("cells"));
 
-  // ---- derived operators ---------------------------------------------
+  // ---- derived operators ------------------------------------------------
   m.def(
       "coboundary",
       [](const Complex& c, int k) {
@@ -163,7 +163,7 @@ PYBIND11_MODULE(_core, m) {
       },
       py::arg("complex"), py::arg("k"), py::arg("via"));
 
-  // ---- frozen (zero-copy views) --------------------------------------
+  // ---- frozen storage, as zero-copy views -------------------------------
   py::class_<FrozenComplex>(m, "FrozenComplex")
       .def_property_readonly("dim", &FrozenComplex::dim)
       .def_property_readonly("halo_depth", &FrozenComplex::halo_depth)
@@ -246,7 +246,7 @@ PYBIND11_MODULE(_core, m) {
           py::arg("k"), py::arg("cell"));
   m.def("dual", &dual, py::keep_alive<0, 1>(), py::arg("frozen"));
 
-  // ---- operations -----------------------------------------------------
+  // ---- the operation calculus -------------------------------------------
   py::class_<DisjointUnionResult>(m, "DisjointUnionResult")
       .def_readonly("complex", &DisjointUnionResult::complex)
       .def_readonly("a_map", &DisjointUnionResult::a_map)
@@ -391,7 +391,7 @@ PYBIND11_MODULE(_core, m) {
           py::arg("k"));
   m.def("barycentric_subdivision", &barycentric_subdivision, py::arg("complex"));
 
-  // ---- queries --------------------------------------------------------
+  // ---- queries ----------------------------------------------------------
   py::class_<FacetClassification>(m, "FacetClassification")
       .def_readonly("maximal", &FacetClassification::maximal)
       .def_readonly("boundary", &FacetClassification::boundary)

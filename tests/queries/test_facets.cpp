@@ -16,8 +16,9 @@ GRAPHOS_TEST(disk_facets_split_into_boundary_and_interior) {
   CHECK(cls.nonmanifold.marked_count(1) == 0);
 }
 
-// After a through-cut, the detached interface original has no cofaces
-// (a maximal (n-1)-cell), and every remaining bulk edge sees exactly one triangle.
+// Witnesses the classification after a through-cut: the detached interface has
+// no coface and is maximal, while every remaining bulk facet has exactly
+// one.
 GRAPHOS_TEST(cut_turns_interface_maximal_and_copies_into_boundary) {
   const graphos::Complex c = graphos_test::make_two_triangle_disk();
   graphos::Marker interface(c);
@@ -31,8 +32,8 @@ GRAPHOS_TEST(cut_turns_interface_maximal_and_copies_into_boundary) {
   CHECK(cls.interior.marked_count(1) == 0);
 }
 
-// Three triangles glued along one edge — a "book" — make that edge
-// nonmanifold.
+// Witnesses the non-manifold case: three 2-cells over one 1-cell give it three
+// cofaces, a book junction.
 GRAPHOS_TEST(book_spine_is_nonmanifold) {
   graphos::Complex c(2);
   c.attach_vertices(5);
@@ -56,7 +57,8 @@ GRAPHOS_TEST(book_spine_is_nonmanifold) {
   CHECK(cls.interior.marked_count(1) == 0);
 }
 
-// The composition the op exists for: extract ∂Ω as its own complex.
+// Witnesses the composition the classification exists for: extracting ∂K as
+// its own complex.
 GRAPHOS_TEST(boundary_complex_of_a_disk_is_a_circle) {
   const graphos::Complex c = graphos_test::make_two_triangle_disk();
   const auto sub = graphos::subcomplex(c, graphos::classify_facets(c).boundary);
@@ -71,7 +73,7 @@ GRAPHOS_TEST(boundary_complex_of_a_disk_is_a_circle) {
 GRAPHOS_TEST(closedness_and_boundary_of_boundary) {
   const graphos::Complex disk = graphos_test::make_two_triangle_disk();
   CHECK(!graphos::is_closed(disk));
-  // the boundary subcomplex is itself closed: ∂(∂K) = ∅
+  // the extracted boundary is itself closed: ∂∂K = ∅
   const auto bd = graphos::subcomplex(disk, graphos::classify_facets(disk).boundary);
   CHECK(graphos::is_closed(bd.complex));
 

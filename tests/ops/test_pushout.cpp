@@ -2,9 +2,9 @@
 #include "graphos/ops/pushout.hpp"
 #include "graphos_test.hpp"
 
-// Pushout of two triangles along a shared edge, with B attached through
-// REVERSED vertex identifications (B0'~A1, B1'~A0) so the shared edge is
-// discovered with relative orientation -1. The orientation stress test.
+// Witnesses that deduplication carries relative orientation: B is attached
+// through reversed vertex identifications, so the shared 1-cell is discovered
+// with rel_sign = −1 and every reference to it flips.
 GRAPHOS_TEST(pushout_with_orientation_flip) {
   const graphos::Complex a = graphos_test::make_triangle();
   const graphos::Complex b = graphos_test::make_triangle();
@@ -18,14 +18,14 @@ GRAPHOS_TEST(pushout_with_orientation_flip) {
   CHECK(graphos::d_squared_is_zero(po.complex));
   CHECK(graphos::euler_characteristic(po.complex) == 1);  // still a disk
 
-  // every cell of A survives with orientation intact
+  // every cell of A survives with its orientation
   for (int k = 0; k <= 2; ++k) {
     for (std::size_t i = 0; i < po.a_map.index[k].size(); ++i) {
       CHECK(po.a_map.index[k][i] != graphos::invalid_index);
       CHECK(po.a_map.sign[k][i] == 1);
     }
   }
-  // B's e0 identified with A's e0 through a flip; B's other cells survive
+  // B's e0 is identified with A's through a flip; B's other cells survive
   CHECK(po.b_map.index[1][0] == po.a_map.index[1][0]);
   CHECK(po.b_map.sign[1][0] == -1);
   CHECK(po.b_map.index[0][0] == po.a_map.index[0][1]);
@@ -34,7 +34,8 @@ GRAPHOS_TEST(pushout_with_orientation_flip) {
   CHECK(po.b_map.index[2][0] != graphos::invalid_index);
   CHECK(po.b_map.index[2][0] != po.a_map.index[2][0]);
 
-  // B's 2-cell must reference the shared edge with the flipped coefficient
+  // B's 2-cell references the shared 1-cell with the flipped incidence
+  // number
   const graphos::Index shared_edge = po.a_map.index[1][0];
   const graphos::Index b_face = po.b_map.index[2][0];
   const graphos::BoundaryOperator& f = po.complex.boundary(2);
@@ -48,8 +49,8 @@ GRAPHOS_TEST(pushout_with_orientation_flip) {
   CHECK(found);
 }
 
-// Without deduplication both copies of the shared edge survive as parallel
-// cells — the BRep "two curves over the same vertex pair" scenario.
+// Witnesses the un-deduplicated pushout: both copies of the shared 1-cell
+// survive as parallel cells over one vertex pair.
 GRAPHOS_TEST(pushout_without_dedupe_keeps_parallel_cells) {
   const graphos::Complex a = graphos_test::make_triangle();
   const graphos::Complex b = graphos_test::make_triangle();

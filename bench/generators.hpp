@@ -6,9 +6,8 @@
 
 namespace graphos_bench {
 
-// Freudenthal/Kuhn triangulation of an n×n×n cube grid: 6 conformal tets
-// per cube, (n+1)³ vertices. The standard synthetic tet mesh for scaling
-// runs — deterministic, no files, any size.
+// Freudenthal–Kuhn triangulation of an n×n×n grid: six conforming 3-simplices
+// per cube over (n+1)³ vertices. Deterministic and file-free at any size.
 inline graphos::Index kuhn_vertex_count(int n) {
   return static_cast<graphos::Index>((n + 1) * (n + 1) * (n + 1));
 }
@@ -40,7 +39,7 @@ inline std::vector<std::vector<graphos::Index>> kuhn_tets(int n) {
   return tets;
 }
 
-// structured triangle grid: n×n quads split into 2n² triangles
+// a structured 2-complex: n×n quads split into 2n² 2-simplices
 inline graphos::Index tri_grid_vertex_count(int n) {
   return static_cast<graphos::Index>((n + 1) * (n + 1));
 }

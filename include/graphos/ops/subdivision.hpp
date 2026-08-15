@@ -10,49 +10,42 @@
 namespace graphos {
 
 struct SubdivisionResult {
-  // Simplicial, same dimension as the input: the order complex of the face
-  // poset. k-cells are strict chains c_0 < c_1 < ... < c_k, with the
-  // standard simplex boundary (remove the m-th element, sign (−1)^m).
+  // The order complex of the face poset: simplicial, of the same dimension.
+  // A k-cell is a strict chain c₀ < c₁ < … < c_k under the simplex boundary
+  // ∂[c₀…c_k] = Σ_m (−1)^m [c₀…ĉ_m…c_k].
   Complex complex;
 
-  // The sd-vertex sitting at the barycenter of original cell (d, i) has
-  // index vertex_offset[d] + i.
+  // The vertex carried by original cell (d, i) has index
+  // vertex_offset[d] + i.
   std::vector<Index> vertex_offset;
 
-  // The carrier of each sd k-cell: the original cell whose interior it
-  // subdivides (the maximal element of its chain). This is the refinement
-  // relation — cochain prolongation and dual-cell assembly key off it.
+  // The carrier of each k-cell: the original cell whose interior it
+  // subdivides, the maximal element of its chain. This is the refinement
+  // relation; prolongation and dual-cell assembly key off it.
   std::vector<std::vector<int>> carrier_dim;
   std::vector<std::vector<Index>> carrier_index;
 
-  // The SIGNED carrier: the incidence product ∏ᵢ [cᵢ : cᵢ₊₁] along the
-  // cell's flag — the subdivision chain-map coefficient (up to a fixed
-  // dimension-dependent convention factor). Nonzero (±1) exactly on FULL
-  // flags (chain dimensions 0, 1, …, k), i.e. on the sd cells that carry
-  // a cell of their own dimension: sd(σᵏ) = Σ carrier_sign · flag over
-  // full flags through σ. Zero on dimension-jumping chains and on
-  // barycenter vertices of positive-dimensional cells (they lie outside
-  // the chain-map image), and on degenerate (non-regular) incidences.
+  // The signed carrier ∏ᵢ [cᵢ : cᵢ₊₁] along the flag: the subdivision
+  // chain-map coefficient, up to a fixed dimension-dependent factor. It is
+  // ±1 exactly on full flags — chain dimensions 0, 1, …, k — so that
+  // sd(σᵏ) = Σ carrier_sign · flag over the full flags through σ, and 0 on
+  // dimension-jumping chains, on the vertices of positive-dimensional cells,
+  // and on degenerate incidences.
   //
-  // ORIENTATION TRANSFER: multiplying each top sd cell by its
-  // carrier_sign turns a consistent orientation of the parent into a
-  // consistent orientation of the subdivision — refinement preserves
-  // orientation through this map rather than by convention.
+  // Multiplying each top cell by its carrier_sign carries a coherent
+  // orientation of the parent to one of the subdivision, so refinement
+  // preserves orientation through this map rather than by convention.
   std::vector<std::vector<Sign>> carrier_sign;
 };
 
-// Barycentric subdivision sd(C): one new vertex per cell of C (its
-// "barycenter" — a name only; graphos places no coordinates), one k-simplex
-// per strict chain of k+1 cells in the face partial order. Works on ANY
-// complex — polytopal, mixed-dimensional — and always yields a simplicial
-// one; this is what makes the combinatorial dual geometrically realizable
-// on the metric side, and the carrier relation doubles as a multigrid
-// prolongation pattern.
+// sd(C): one vertex per cell of C — barycentre is a name only, since graphos
+// places no coordinates — and one k-simplex per strict chain of k+1 cells in
+// the face poset. Defined on any complex, polytopal or mixed-dimensional, and
+// always simplicial, which is what makes the combinatorial dual realizable on
+// the metric side. The carrier relation is also a prolongation pattern.
 //
-// Deterministic: chains are enumerated in lexicographic order of their
-// flattened cell ids, so sd indices are reproducible.
-//
-// Collective. P=1 today.
+// Deterministic: chains are enumerated in lexicographic order of flattened
+// cell ids, so indices are reproducible.
 inline SubdivisionResult barycentric_subdivision(const Complex& c) {
   const int dim = c.dim();
 
@@ -63,8 +56,8 @@ inline SubdivisionResult barycentric_subdivision(const Complex& c) {
   }
   const Index n_sd_vertices = vertex_offset[static_cast<std::size_t>(dim)] + c.count(dim);
 
-  // upward incidence for chain extension: up[dx][dy] lists the dy-cells
-  // having a given dx-cell in their closure
+  // upward incidence for chain extension: up[dx][dy] lists the dy-cells with
+  // a given dx-cell in their closure
   std::vector<std::vector<Adjacency>> up(static_cast<std::size_t>(dim) + 1);
   for (int dx = 0; dx < dim; ++dx) {
     up[static_cast<std::size_t>(dx)].resize(static_cast<std::size_t>(dim) + 1);
@@ -73,8 +66,8 @@ inline SubdivisionResult barycentric_subdivision(const Complex& c) {
     }
   }
 
-  // chains per sd dimension, as flattened-id vectors (ascending, since flat
-  // ids grow with cell dimension), plus their (dim, index) elements
+  // chains per stratum as flattened-id vectors, ascending since flat ids grow
+  // with dimension, with their (dim, index) elements
   struct Chain {
     std::vector<Index> flat;
     std::vector<std::pair<int, Index>> elems;
@@ -105,8 +98,8 @@ inline SubdivisionResult barycentric_subdivision(const Complex& c) {
           ext.full = false;
           ext.csign = 0;
           if (base.full && dy == d_top + 1) {
-            // incidence coefficient [c_top : y]: the (summed) sign of the
-            // extended-over cell in ∂y — ±1 in regular complexes
+            // [c_top : y], the summed incidence of the extended-over cell in
+            // ∂y; ±1 when the complex is regular
             const BoundaryOperator& by = c.boundary(dy);
             int step = 0;
             for (Index q = by.offsets[y]; q < by.offsets[y + 1]; ++q) {

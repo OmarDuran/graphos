@@ -1,16 +1,13 @@
-// Constant-factor performance guards, the layer scaling assertions cannot
-// cover. Two deterministic-enough checks:
+// Constant-factor guards, which the scaling assertions cannot cover:
 //
-//  1. STORAGE MODEL: the bytes actually stored per cell are asserted
-//     against the theoretical CSR model (int32 indices + int8 signs, both
-//     directions). Catches structural bloat — someone adding a per-cell
-//     container — exactly, machine-independently.
+//  1. Storage: bytes per cell against the CSR model — int32 indices, int8
+//     incidence numbers, both directions. Catches structural bloat exactly
+//     and machine-independently.
 //
-//  2. CALIBRATED THROUGHPUT FLOORS: bulk ops are memory-bound, so their
-//     cells/s should track the machine's own memcpy bandwidth, which is
-//     measured in-process. Floors are set ~10x below the observed ratio on
-//     apple-silicon — loose enough for noisy CI runners, tight enough that
-//     an order-of-magnitude constant regression fails.
+//  2. Throughput: bulk operations are memory-bound, so cells/s should track
+//     the machine's own memcpy bandwidth, measured in-process. Floors sit an
+//     order of magnitude below the observed ratio, so only a constant-factor
+//     regression of that size fails.
 
 #include <chrono>
 #include <cstring>
@@ -23,10 +20,9 @@
 using Clock = std::chrono::steady_clock;
 using graphos::Index;
 
-// Throughput floors are only meaningful in optimized, uninstrumented
-// builds: sanitizers slow the ops ~50x while libc memcpy stays native,
-// which breaks the calibration. Debug/sanitized builds report but do not
-// assert.
+// The floors are meaningful only in optimized, uninstrumented builds: a
+// sanitizer slows the operations while memcpy stays native, breaking the
+// calibration. Such builds report without asserting.
 #if !defined(NDEBUG) || defined(__SANITIZE_ADDRESS__)
 #define GRAPHOS_PERF_ASSERT 0
 #elif defined(__has_feature)
@@ -95,8 +91,8 @@ GRAPHOS_TEST(storage_matches_the_csr_memory_model) {
   double cells = 0;
   for (int k = 0; k <= 3; ++k) cells += c.count(k);
 
-  // model: tet-mesh nnz/cell ~ 2.8, each entry 5 bytes (+ offsets), per
-  // direction — ∂ alone ~ 18 B/cell, ∂ + δ ~ 36 B/cell
+  // model: nnz per cell ≈ 2.8 on a simplicial complex, five bytes an entry
+  // plus offsets, per direction — ∂ alone ≈ 18 B/cell, ∂ with δ ≈ 36
   const double boundary_per_cell = static_cast<double>(stored_bytes(c)) / cells;
   const double both_per_cell = static_cast<double>(stored_bytes(c) + coboundary_bytes(c)) / cells;
   std::printf("  storage: boundary %.1f B/cell, with coboundary %.1f B/cell\n", boundary_per_cell,
@@ -122,8 +118,8 @@ GRAPHOS_TEST(bulk_op_throughput_tracks_memory_bandwidth) {
   const auto cls = graphos::classify_facets(c);
   const double sub_ms = best_of_3_ms([&] { graphos::subcomplex(c, cls.boundary); });
 
-  // observed on M3: ~2-3 Mcells/s per GB/s of memcpy; floor at 0.2 gives
-  // ~10x headroom for slower memory systems and CI noise
+  // observed: 2–3 Mcells/s per GB/s of memcpy; a floor of 0.2 leaves an
+  // order of magnitude for slower memory and CI noise
   const double floor_cells_per_ms = gbps * 0.2e3;
   const auto report = [&](const char* name, double t_ms) {
     const double rate = cells / t_ms;

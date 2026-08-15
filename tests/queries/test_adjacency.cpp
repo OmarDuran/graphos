@@ -17,7 +17,8 @@ std::vector<Index> row(const graphos::Adjacency& a, Index i) {
 GRAPHOS_TEST(facet_adjacency_is_the_dual_graph) {
   const graphos::Complex fan = graphos_test::make_fan();
   const graphos::Adjacency adj = graphos::adjacency(fan, 2, 1);
-  // T0 shares spokes with T1 (s1) and T3 (s0); boundary edges connect nothing
+  // T0 meets T1 through s1 and T3 through s0; a boundary 1-cell connects
+  // nothing
   CHECK(row(adj, 0) == (std::vector<Index>{1, 3}));
   CHECK(row(adj, 1) == (std::vector<Index>{0, 2}));
   CHECK(row(adj, 2) == (std::vector<Index>{1, 3}));
@@ -27,12 +28,12 @@ GRAPHOS_TEST(facet_adjacency_is_the_dual_graph) {
 GRAPHOS_TEST(node_adjacency_is_coarser_than_facet_adjacency) {
   const graphos::Complex fan = graphos_test::make_fan();
   const graphos::Adjacency adj = graphos::adjacency(fan, 2, 0);
-  // every triangle shares the center vertex with every other
+  // every 2-cell meets every other at the interior vertex
   for (Index t = 0; t < 4; ++t) CHECK(row(adj, t).size() == 3);
 }
 
 GRAPHOS_TEST(vertex_adjacency_through_edges) {
-  // path 0-1-2: the middle vertex neighbors both ends
+  // in the path 0–1–2 the interior vertex is adjacent to both ends
   graphos::Complex c(1);
   c.attach_vertices(3);
   c.attach_cell(1, {0, 1}, {-1, +1});

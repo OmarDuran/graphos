@@ -35,7 +35,7 @@ GRAPHOS_TEST(book_junction_fails_the_facet_check) {
 }
 
 GRAPHOS_TEST(pinched_vertex_fails_link_connectivity) {
-  // two triangles sharing ONLY vertex 0
+  // two 2-cells meeting in a single vertex: a pinch point
   graphos::Complex c(2);
   c.attach_vertices(5);
   c.attach_cell(1, {0, 1}, {-1, +1});
@@ -57,8 +57,7 @@ GRAPHOS_TEST(pinched_vertex_fails_link_connectivity) {
 }
 
 GRAPHOS_TEST(mixed_dimensional_complex_reports_impure) {
-  // triangle with a dangling maximal edge (by design: validate pure
-  // subcomplexes, not mixed-dimensional wholes)
+  // a 2-cell with a maximal 1-cell attached: not pure, and reported as such
   graphos::Complex c(2);
   c.attach_vertices(4);
   c.attach_cell(1, {0, 1}, {-1, +1});
@@ -74,15 +73,15 @@ GRAPHOS_TEST(mixed_dimensional_complex_reports_impure) {
 }
 
 GRAPHOS_TEST(vertex_links_classify_sphere_and_ball) {
-  // fan: the center's link is a circle (sphere), every rim vertex's link
-  // is an interval (ball)
+  // in the fan, lk(interior vertex) is a circle and lk(rim vertex) an
+  // interval
   const auto fan = graphos::classify_vertex_links(graphos_test::make_fan());
   CHECK(fan.sphere.marked(0, 4));
   CHECK(fan.sphere.marked_count(0) == 1);
   CHECK(fan.ball.marked_count(0) == 4);
   CHECK(fan.other.marked_count(0) == 0);
 
-  // path: interior vertex link is S⁰ (two points), endpoints are balls
+  // in the path, lk(interior vertex) = S⁰ and the endpoints are balls
   graphos::Complex path(1);
   path.attach_vertices(3);
   path.attach_cell(1, {0, 1}, {-1, +1});

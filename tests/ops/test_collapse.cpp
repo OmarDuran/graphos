@@ -21,9 +21,9 @@ GRAPHOS_TEST(disk_collapses_to_a_point) {
   CHECK(res.complex.count(0) == 1);
   CHECK(res.complex.count(1) == 0);
   CHECK(res.complex.count(2) == 0);
-  // (4+5+2 cells - 1 survivor) / 2 elementary collapses
+  // (4 + 5 + 2 cells − 1 survivor) / 2 elementary collapses
   CHECK(res.removed_pairs == 5);
-  // exactly one cell of the original survives, and it is a vertex
+  // one cell survives, and it is a vertex: the complex is collapsible
   Index survivors = 0;
   for (int k = 0; k <= 2; ++k) {
     for (std::size_t i = 0; i < res.map.index[k].size(); ++i) {
@@ -58,7 +58,7 @@ GRAPHOS_TEST(moebius_band_collapses_to_its_core_circle) {
   CHECK(res.complex.count(2) == 0);  // the band is gone
   CHECK(res.complex.count(1) > 0);   // the core circle is not
   CHECK(graphos::betti_numbers_z2(res.complex) == (std::vector<Index>{1, 1, 0}));
-  // the endpoint has no free faces left
+  // the endpoint carries no free face
   const graphos::Marker ff = graphos::free_faces(res.complex);
   for (int k = 0; k <= 2; ++k) CHECK(ff.marked_count(k) == 0);
 }

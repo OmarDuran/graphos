@@ -14,15 +14,15 @@ GRAPHOS_TEST(disk_top_cells_are_one_component) {
   CHECK(cc.label[1] == 0);
 }
 
-// The "sides of a cut" computation: excluding the interface facet as a
-// connector separates the two triangles.
+// Witnesses the sides of a cut: removing the interface facet as a connector
+// separates the two 2-cells into distinct components.
 GRAPHOS_TEST(excluding_the_interface_separates_sides) {
   const graphos::Complex c = graphos_test::make_two_triangle_disk();
   graphos::Marker interface(c);
   interface.mark(1, 0);
   const auto cc = graphos::connected_components(c, 2, 1, interface);
   CHECK(cc.count == 2);
-  // deterministic: components numbered by lowest-indexed cell
+  // components are numbered by lowest-indexed member
   CHECK(cc.label[0] == 0);
   CHECK(cc.label[1] == 1);
 }
@@ -45,18 +45,18 @@ GRAPHOS_TEST(whole_complex_components_count_beta_zero) {
   const graphos::Complex c = graphos_test::make_two_triangle_disk();
   CHECK(graphos::connected_components(c).count == 1);
 
-  // disjoint union: two pieces
+  // the coproduct has two components
   const auto du = graphos::disjoint_union(c, graphos_test::make_segment());
   const auto cc = graphos::connected_components(du.complex);
   CHECK(cc.count == 2);
 
-  // after a through-cut: two triangles + the detached interface segment
+  // after a through-cut: two 2-cells and the detached interface
   graphos::Marker interface(c);
   interface.mark(1, 0);
   const auto cut = graphos::cut_along(c, interface);
   const auto cut_cc = graphos::connected_components(cut.complex);
   CHECK(cut_cc.count == 3);
-  // the fracture original and its endpoints share a component
+  // the interface original and its endpoints share a component
   CHECK(cut_cc.label[1][0] == cut_cc.label[0][0]);
   CHECK(cut_cc.label[1][0] == cut_cc.label[0][1]);
 }

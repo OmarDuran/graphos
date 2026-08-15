@@ -5,8 +5,8 @@
 
 using graphos::Index;
 
-// Restricting the two-triangle disk to one face pulls out that triangle
-// with its full closure.
+// Witnesses that subcomplex extracts cl(S): restricting the disk to one 2-cell
+// yields that cell with its closure.
 GRAPHOS_TEST(one_face_restriction_is_a_triangle) {
   const graphos::Complex c = graphos_test::make_two_triangle_disk();
   graphos::Marker m(c);
@@ -20,7 +20,7 @@ GRAPHOS_TEST(one_face_restriction_is_a_triangle) {
   CHECK(graphos::d_squared_is_zero(sub.complex));
   CHECK(graphos::euler_characteristic(sub.complex) == 1);
 
-  // B's private cells are outside the subcomplex
+  // B's private cells lie outside cl(S)
   CHECK(sub.map.index[0][3] == graphos::invalid_index);
   CHECK(sub.map.index[1][3] == graphos::invalid_index);
   CHECK(sub.map.index[1][4] == graphos::invalid_index);
@@ -34,8 +34,8 @@ GRAPHOS_TEST(one_face_restriction_is_a_triangle) {
   }
 }
 
-// Marking every edge extracts the 1-skeleton: the triangle's skeleton is a
-// circle (Euler characteristic 0).
+// Witnesses skeleton extraction: marking every 1-cell yields the 1-skeleton,
+// a circle, with χ = 0.
 GRAPHOS_TEST(one_skeleton_of_a_triangle_is_a_circle) {
   const graphos::Complex c = graphos_test::make_triangle();
   graphos::Marker m(c);
@@ -48,26 +48,26 @@ GRAPHOS_TEST(one_skeleton_of_a_triangle_is_a_circle) {
   CHECK(graphos::euler_characteristic(sub.complex) == 0);  // circle
 }
 
-// The fracture workflow: cut the disk along the shared edge, then extract
-// the detached interface domain as its own complex.
+// Witnesses that cut and subcomplex compose: cutting the disk along the shared
+// 1-cell and extracting the detached interface gives it as its own complex.
 GRAPHOS_TEST(extracts_fracture_domain_after_a_cut) {
   const graphos::Complex c = graphos_test::make_two_triangle_disk();
   graphos::Marker interface(c);
   interface.mark(1, 0);
   const auto cut = graphos::cut_along(c, interface);
 
-  // the interface ORIGINAL survives the cut at its old index
+  // the original interface survives the cut at its old index
   graphos::Marker fracture(cut.complex);
   fracture.mark(1, 0);
   const auto sub = graphos::subcomplex(cut.complex, fracture);
   sub.complex.validate();
 
-  // a segment: the fracture edge and its two (original) endpoints
+  // a segment: the interface 1-cell with its two original endpoints
   CHECK(sub.complex.count(0) == 2);
   CHECK(sub.complex.count(1) == 1);
   CHECK(sub.complex.count(2) == 0);
   CHECK(graphos::euler_characteristic(sub.complex) == 1);
-  // embedded at the original cells of the parent
+  // embedded at the parent's original cells
   CHECK(sub.embedding.index[1][0] == 0);
   CHECK(sub.embedding.index[0][0] == 0);
   CHECK(sub.embedding.index[0][1] == 1);

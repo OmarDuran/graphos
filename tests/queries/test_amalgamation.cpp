@@ -7,9 +7,9 @@
 
 using graphos::Index;
 
-// The hypothesis of the amalgamation lemma: two 2-cells sharing a single
-// edge — the common boundary is an interval (a 1-ball), the intersection
-// is proper, and the union is again a cell.
+// Witnesses the hypothesis of the amalgamation lemma: two 2-cells sharing one
+// 1-cell have a common boundary that is a 1-ball and closures meeting
+// properly, so σ ∪ τ is a cell.
 GRAPHOS_TEST(cells_sharing_one_facet_amalgamate) {
   const graphos::Complex c = graphos_test::make_two_triangle_disk();
   const auto shared = graphos::common_boundary(c, 2, 0, 1);
@@ -21,9 +21,9 @@ GRAPHOS_TEST(cells_sharing_one_facet_amalgamate) {
   CHECK(graphos::amalgamates_to_cell(c, 2, 0, 1));
 }
 
-// Improper intersection: a quad and a pentagon sharing one edge, with the
-// pentagon also touching the quad's far vertex. The excess intersection is
-// exactly that vertex — the amalgamated cell would be pinched there.
+// Witnesses the improper case: two 2-cells sharing a 1-cell and, apart from
+// it, a vertex. The excess intersection is that vertex, at which σ ∪ τ would
+// be pinched.
 GRAPHOS_TEST(excess_intersection_detects_the_pinch) {
   const graphos::Complex c = graphos::from_polygons(8, {{0, 1, 2, 3}, {1, 0, 6, 2, 7}});
   const auto shared = graphos::common_boundary(c, 2, 0, 1);
@@ -35,9 +35,9 @@ GRAPHOS_TEST(excess_intersection_detects_the_pinch) {
   CHECK(!graphos::amalgamates_to_cell(c, 2, 0, 1));
 }
 
-// A circular common boundary: the two triangles of a cylinder share two
-// edges forming a 1-cycle — connected but not acyclic (b₁ = 1), so no
-// ball, no amalgamation (the union would be an annulus, not a cell).
+// Witnesses the cyclic case: a common boundary of two 1-cells forming a
+// 1-cycle is connected but not Z₂-acyclic (β₁ = 1), hence not a ball, and
+// σ ∪ τ would be an annulus rather than a cell.
 GRAPHOS_TEST(circular_common_boundary_is_not_acyclic) {
   graphos::Complex square(2);
   square.attach_vertices(4);

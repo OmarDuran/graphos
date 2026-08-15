@@ -7,8 +7,8 @@ using graphos::Index;
 
 namespace {
 
-// unit square as two triangles: b=[0,1](0), r=[1,2](1), t=[3,2](2),
-// l=[0,3](3), diagonal d=[0,2](4)
+// the square as two 2-cells: b=[0,1](0), r=[1,2](1), t=[3,2](2), l=[0,3](3),
+// diagonal d=[0,2](4)
 graphos::Complex make_square() {
   graphos::Complex c(2);
   c.attach_vertices(4);
@@ -25,8 +25,9 @@ graphos::Complex make_square() {
 
 }  // namespace
 
-// Gluing a chain of segments end to start needs only the vertex pair: no
-// edge lifts (the middle vertex is unmapped), and the quotient is a circle.
+// Witnesses that nothing lifts without fully mapped faces: identifying the
+// ends of a chain of 1-cells leaves the interior vertex unmapped, so no 1-cell
+// lifts and the quotient is a circle.
 GRAPHOS_TEST(chain_to_circle_lifts_nothing_above_vertices) {
   graphos::Complex c(1);
   c.attach_vertices(3);
@@ -43,9 +44,9 @@ GRAPHOS_TEST(chain_to_circle_lifts_nothing_above_vertices) {
   CHECK(graphos::euler_characteristic(q.complex) == 0);  // a circle
 }
 
-// Periodic boundary conditions: pair left edge vertices with right edge
-// vertices; the left edge lifts onto the right edge and the quotient is a
-// cylinder.
+// Witnesses the periodic identification: pairing the vertices of the left
+// 1-cell with those of the right lifts the 1-cells themselves, and the
+// quotient is a cylinder.
 GRAPHOS_TEST(periodic_square_becomes_a_cylinder) {
   const graphos::Complex c = make_square();
   const auto ids = graphos::lift_identifications(c, {{0, 1, +1}, {3, 2, +1}});
@@ -65,9 +66,9 @@ GRAPHOS_TEST(periodic_square_becomes_a_cylinder) {
   CHECK(graphos::euler_characteristic(q.complex) == 0);  // cylinder
 }
 
-// The twisted pairing: the left edge lifts onto the right edge REVERSED,
-// and the quotient is a Möbius band — the orientation stress test for the
-// whole lift/quotient pipeline.
+// Witnesses the reversed lift: the twisted pairing carries the left 1-cell
+// onto the right with rel_sign = −1, and the quotient is a Möbius band —
+// non-orientable, which orient() then reports.
 GRAPHOS_TEST(twisted_pairing_becomes_a_moebius_band) {
   const graphos::Complex c = make_square();
   const auto ids = graphos::lift_identifications(c, {{0, 2, +1}, {3, 1, +1}});

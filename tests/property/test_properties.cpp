@@ -1,6 +1,6 @@
-// Property-based fuzzing: random complexes through random op sequences,
-// asserting the algebra's laws after every step. This is the layer that
-// finds the case no hand-written fixture thought of.
+// Property-based fuzzing: random complexes through random operation
+// sequences, asserting the laws of the calculus after every step — the layer
+// that reaches the cases no fixture enumerates.
 
 #include <random>
 #include <set>
@@ -13,8 +13,8 @@ using graphos::Index;
 
 namespace {
 
-// invariants every complex must satisfy, and the Euler-Poincaré identity
-// tying χ to the Z₂ Betti numbers
+// the structural invariants, and the Euler–Poincaré identity
+// χ = Σ_k (−1)^k β_k over Z₂
 void assert_laws(const graphos::Complex& c) {
   c.validate();
   CHECK(graphos::d_squared_is_zero(c));
@@ -41,8 +41,8 @@ graphos::Complex random_simplicial(std::mt19937& rng) {
   std::set<std::vector<Index>> used;
   std::vector<std::vector<Index>> cells;
   std::uniform_int_distribution<Index> pick(0, nv - 1);
-  // bounded attempts: small vertex pools may not admit ncells distinct
-  // simplices (C(nv, dim+1) can be < ncells)
+  // bounded attempts: a small vertex pool need not admit ncells distinct
+  // simplices, since C(nv, dim+1) may be smaller
   for (int tries = 0; tries < 400 && static_cast<int>(cells.size()) < ncells; ++tries) {
     std::set<Index> verts;
     while (static_cast<int>(verts.size()) < dim + 1) verts.insert(pick(rng));
@@ -107,8 +107,8 @@ GRAPHOS_TEST(random_complexes_through_random_ops) {
           break;
         }
         case 4: {
-          // agglomerate by facet-connected components; may legitimately
-          // reject inconsistent orientation — that path is also under test
+          // agglomerate by facet-connected components; an incoherent
+          // orientation is legitimately rejected, and that path is under test
           if (c.dim() < 1 || c.count(c.dim()) == 0) break;
           const auto labels = graphos::connected_components(c, c.dim(), c.dim() - 1);
           try {
@@ -116,7 +116,7 @@ GRAPHOS_TEST(random_complexes_through_random_ops) {
             assert_chain_map_valid(r.map, r.complex);
             c = r.complex;
           } catch (const std::invalid_argument&) {
-            // documented rejection: orientation not consistent
+            // the documented rejection: the stratum is not coherent
           }
           break;
         }
@@ -129,8 +129,8 @@ GRAPHOS_TEST(random_complexes_through_random_ops) {
           break;
         }
         case 6: {
-          // dimensional-descent coarsening by facet-connected components;
-          // orientation rejection is a documented path
+          // dimensional descent by facet-connected components; rejection on
+          // orientation is a documented path
           if (c.dim() < 1 || c.count(c.dim()) == 0) break;
           const auto labels = graphos::connected_components(c, c.dim(), c.dim() - 1);
           try {
@@ -170,8 +170,8 @@ GRAPHOS_TEST(subdivision_preserves_homotopy_of_random_complexes) {
     CHECK(graphos::betti_numbers_z2(sd.complex) == graphos::betti_numbers_z2(c));
     CHECK(graphos::euler_characteristic(sd.complex) == graphos::euler_characteristic(c));
 
-    // orientation-transfer law on the orientable ones: the signed carrier
-    // turns a consistent parent orientation into a consistent subdivision
+    // the transfer law on the orientable ones: the signed carrier takes a
+    // coherent orientation of the parent to one of sd(C)
     const auto o = graphos::orient(c);
     if (!o.orientable) continue;
     const auto osd = graphos::barycentric_subdivision(o.complex);

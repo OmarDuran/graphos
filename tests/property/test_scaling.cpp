@@ -1,8 +1,7 @@
-// Scaling-law assertions: the performance analogue of d∘d = 0. Each op has
-// a complexity model; growing the mesh 8× must not grow the time like a
-// quadratic algorithm would (~64×). Bounds are deliberately loose (CI
-// machines are noisy) — this catches complexity regressions, not
-// constant-factor ones; the bench/ driver measures those.
+// Scaling assertions: each operation has a complexity model, and growing the
+// complex 8× must not grow the time as a quadratic algorithm would, by ~64×.
+// The bounds are loose by design — this catches a change of complexity class,
+// not of constant factor, which bench/ measures.
 
 #include <chrono>
 #include <cstdio>
@@ -56,8 +55,8 @@ GRAPHOS_TEST(ops_scale_subquadratically) {
   const double sd_s = best_of_3_ms([&] { graphos::star_deletion(cs, ms); });
   const double sd_l = best_of_3_ms([&] { graphos::star_deletion(cl, ml); });
 
-  // quadratic behavior at 8x size shows as ~64x; allow generous headroom
-  // for timer noise on tiny inputs
+  // quadratic growth at 8× shows as ~64×; the headroom absorbs timer noise on
+  // small inputs
   const auto check_ratio = [](const char* name, double s, double l, double bound) {
     const double ratio = l / std::max(s, 0.01);
     std::printf("  scaling %-16s %6.2fx (bound %.0fx)\n", name, ratio, bound);

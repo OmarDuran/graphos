@@ -15,42 +15,35 @@ namespace graphos {
 
 struct CoarsenResult {
   Complex complex;
-  // fine -> coarse: index[k][f] is the coarse cell f became part of
-  // (invalid_index if sent to zero); sign[k][f] is f's orientation within its
-  // coarse cell. Cochain restriction gathers through this map.
+  // fine → coarse: index[k][σ] is the coarse cell σ joined (invalid_index if
+  // sent to 0), sign[k][σ] its orientation within that cell. Cochain
+  // restriction gathers through this map.
   ChainMap map;
 };
 
-// Multilevel coarsening by DIMENSIONAL DESCENT of the agglomeration
-// primitive. The top stratum is agglomerated by the given labels; then,
-// descending one dimension at a time, the surviving interface cells are
-// themselves agglomerated: cells with the same set of coarse cofaces,
-// connected through faces incident to exactly two of them, merge into one
-// coarse cell under the same coefficient-cancellation rule (interior faces
-// cancel, the rim survives). The recursion bottoms at the vertices, which
-// are only relabeled — merging vertices is quotient()'s job.
+// Multilevel coarsening by dimensional descent of agglomerate. The top
+// stratum is agglomerated by the given labels; descending one stratum at a
+// time, the surviving interface cells are agglomerated in turn — cells with
+// equal sets of coarse cofaces, connected through faces incident to exactly
+// two of them, merge under the same cancellation rule, interior faces
+// cancelling and the rim surviving. The descent stops at the vertices, which
+// are only relabelled; merging vertices is quotient's operation.
 //
-// A patch merges only when every check passes; otherwise its members stay
-// as individual coarse cells (graceful fallback, never an error):
-//   - a consistent orientation of the patch exists (sign propagation),
+// A patch merges only if every condition holds; otherwise its members remain
+// individual coarse cells rather than raising:
+//   - the patch admits a coherent orientation (sign propagation),
 //   - no boundary coefficient exceeds 1 in magnitude,
-//   - the merged boundary is nonempty (no closed-cell creation),
+//   - the merged boundary is nonempty (no closed cell is created),
 //   - the patch sits consistently inside each of its coarse cofaces.
 //
-// graphos is METRIC-FREE: it cannot know where a geometric corner or
-// feature line is, and combinatorially an L-shaped coarse edge is
-// perfectly legitimate. Feature cells are therefore DECLARED by the caller
-// through `protected_cells` — the same input pattern as Identifications.
-// Protection is a BARRIER: patches at the dimension above neither connect
-// nor cancel across a protected cell (it stays on the rim), while the
-// protected cell itself may still merge along its own dimension's descent.
-// So to recover a tensor hierarchy exactly, protect the coarse lattice
-// frame: corner vertices (barriers for edge chains) and lattice edges
-// (barriers for face patches), and so on by dimension. Unprotected, the
-// merge is maximal.
-//
-// Logically collective: labels and protections are supplied per-rank for
-// locally owned cells. P=1 today; serial host code like agglomerate.
+// Being metric-free, graphos cannot locate a geometric feature: an L-shaped
+// coarse edge is combinatorially legitimate. Feature cells are therefore
+// declared through `protected_cells`. Protection is a barrier — patches one
+// stratum up neither connect nor cancel across a protected cell, which stays
+// on the rim — while the protected cell may still merge in its own descent.
+// Protecting the coarse lattice frame (corner vertices, then lattice edges,
+// and so on by dimension) recovers a tensor hierarchy exactly. Unprotected,
+// the merge is maximal.
 inline CoarsenResult coarsen(const Complex& c, const std::vector<Index>& top_labels,
                              const Marker* protected_cells = nullptr) {
   const int n = c.dim();
@@ -74,14 +67,14 @@ inline CoarsenResult coarsen(const Complex& c, const std::vector<Index>& top_lab
     if (!u) throw std::invalid_argument("coarsen: aggregate ids must be contiguous");
   }
 
-  // per stratum: fine->coarse assignment, member orientation, and coarse
-  // rows expressed in the FINE basis of the stratum below
+  // per stratum: the fine → coarse assignment, member orientations, and
+  // coarse rows in the fine basis of the stratum below
   std::vector<std::vector<Index>> group(static_cast<std::size_t>(n) + 1);
   std::vector<std::vector<Sign>> rel(static_cast<std::size_t>(n) + 1);
   std::vector<std::vector<std::map<Index, int>>> rows(static_cast<std::size_t>(n) + 1);
   std::vector<Index> coarse_counts(static_cast<std::size_t>(n) + 1, 0);
 
-  // ---- top stratum: agglomeration by the given labels ----------------
+  // ---- top stratum: agglomeration by the given labels ------------------
   {
     const BoundaryOperator& bnd = c.boundary(n);
     group[static_cast<std::size_t>(n)] = top_labels;
@@ -108,12 +101,12 @@ inline CoarsenResult coarsen(const Complex& c, const std::vector<Index>& top_lab
     coarse_counts[static_cast<std::size_t>(n)] = n_agg;
   }
 
-  // ---- dimensional descent -------------------------------------------
+  // ---- dimensional descent ---------------------------------------------
   for (int k = n - 1; k >= 0; --k) {
     const std::size_t sk = static_cast<std::size_t>(k);
     const Index nk = c.count(k);
 
-    // signature: each fine cell's coarse cofaces with coefficients
+    // signature: a cell's coarse cofaces with their coefficients
     std::vector<std::vector<std::pair<Index, int>>> sig(static_cast<std::size_t>(nk));
     for (Index C = 0; C < coarse_counts[sk + 1]; ++C) {
       for (const auto& [f, a] : rows[sk + 1][static_cast<std::size_t>(C)]) {
@@ -122,7 +115,7 @@ inline CoarsenResult coarsen(const Complex& c, const std::vector<Index>& top_lab
     }
     const CoboundaryOperator cob = coboundary(c, k);
 
-    // candidate patches: same coface-id set, unprotected, dim >= 1
+    // candidate patches: equal coface sets, unprotected, dim ≥ 1
     struct Patch {
       std::vector<Index> members;
       std::vector<Sign> coeff;
@@ -146,8 +139,8 @@ inline CoarsenResult coarsen(const Complex& c, const std::vector<Index>& top_lab
       for (const auto& [key, members] : groups) {
         (void)key;
         if (members.size() < 2) continue;
-        // shared unprotected faces incident to exactly two members connect
-        // and cancel; everything else is rim
+        // unprotected faces incident to exactly two members connect and
+        // cancel; the rest is rim
         std::map<Index, std::vector<int>> via;
         for (std::size_t p = 0; p < members.size(); ++p) {
           for (Index m = bnd.offsets[members[p]]; m < bnd.offsets[members[p] + 1]; ++m) {
@@ -167,7 +160,7 @@ inline CoarsenResult coarsen(const Complex& c, const std::vector<Index>& top_lab
           (void)root;
           if (positions.size() < 2) continue;
 
-          // orientation propagation across two-member faces
+          // propagate orientation across two-member faces
           std::vector<int> local(static_cast<std::size_t>(members.size()), -1);
           for (std::size_t i = 0; i < positions.size(); ++i) {
             local[static_cast<std::size_t>(positions[i])] = static_cast<int>(i);
@@ -211,8 +204,8 @@ inline CoarsenResult coarsen(const Complex& c, const std::vector<Index>& top_lab
           }
           for (const Sign s : coeff) ok = ok && (s != 0);
 
-          // cancellation: merged boundary with coefficients in {-1,0,1},
-          // nonempty
+          // cancellation: a nonempty merged boundary with coefficients in
+          // {−1, 0, 1}
           std::map<Index, int> chain;
           if (ok) {
             for (std::size_t i = 0; i < positions.size() && ok; ++i) {
@@ -257,8 +250,8 @@ inline CoarsenResult coarsen(const Complex& c, const std::vector<Index>& top_lab
       }
     }
 
-    // allocation in fine-index order (patches allocate at their first
-    // member); survivors are cells with a signature or with no cofaces
+    // allocate in fine-index order, a patch at its first member; survivors
+    // are the cells with a signature or with no cofaces
     group[sk].assign(static_cast<std::size_t>(nk), invalid_index);
     rel[sk].assign(static_cast<std::size_t>(nk), Sign{1});
     std::vector<char> patch_done(patches.size(), 0);
@@ -296,7 +289,7 @@ inline CoarsenResult coarsen(const Complex& c, const std::vector<Index>& top_lab
     }
   }
 
-  // ---- assemble in the coarse basis ----------------------------------
+  // ---- assemble in the coarse basis ------------------------------------
   std::vector<BoundaryOperator> strata(static_cast<std::size_t>(n) + 1);
   std::vector<Index> row_idx;
   std::vector<Sign> row_sg;

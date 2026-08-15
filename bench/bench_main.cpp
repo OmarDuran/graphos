@@ -1,7 +1,6 @@
-// graphos benchmark driver: structured tet grids, per-op wall time and
-// throughput. Usage: graphos_bench [n ...] (grid sizes; default 16 32).
-// Numbers here are the evidence behind any performance claim — rerun after
-// touching an op's implementation.
+// Benchmark driver: structured simplicial grids, per-operation wall time and
+// throughput. Usage: graphos_bench [n ...], grid sizes, default 16 32. These
+// numbers are the evidence behind any performance claim.
 
 #include <chrono>
 #include <cstdio>

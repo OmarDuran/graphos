@@ -5,8 +5,8 @@
 
 using graphos::Index;
 
-// Merging both triangles of the disk yields one quad-like polytopal cell:
-// the diagonal cancels, the four boundary edges survive.
+// Witnesses cancellation: merging both 2-cells of the disk gives one polytopal
+// cell whose shared 1-cell cancels from Σ ∂(members), leaving four faces.
 GRAPHOS_TEST(disk_agglomerates_into_one_polytopal_cell) {
   const auto oriented = graphos::orient(graphos_test::make_two_triangle_disk());
   const auto agg = graphos::agglomerate(oriented.complex, {0, 0});
@@ -18,7 +18,7 @@ GRAPHOS_TEST(disk_agglomerates_into_one_polytopal_cell) {
   CHECK(graphos::d_squared_is_zero(agg.complex));
   CHECK(graphos::euler_characteristic(agg.complex) == 1);
 
-  // the interior facet maps to zero; the top cells map to the aggregate
+  // the interior facet maps to 0, the top cells to the aggregate
   CHECK(agg.map.index[1][0] == graphos::invalid_index);
   CHECK(agg.map.index[2][0] == 0);
   CHECK(agg.map.index[2][1] == 0);
@@ -29,7 +29,7 @@ GRAPHOS_TEST(fan_agglomerates_into_two_cells) {
   const auto agg = graphos::agglomerate(c, {0, 0, 1, 1});
   agg.complex.validate();
 
-  // interfaces s0 (T0|T3) and s2 (T1|T2) survive; s1, s3 are interior
+  // the interfaces s0 and s2 survive; s1 and s3 are interior
   CHECK(agg.complex.count(0) == 5);  // center survives on the interface
   CHECK(agg.complex.count(1) == 6);  // 4 boundary + 2 interface spokes
   CHECK(agg.complex.count(2) == 2);
@@ -40,8 +40,8 @@ GRAPHOS_TEST(fan_agglomerates_into_two_cells) {
   CHECK(agg.map.index[1][0] != graphos::invalid_index);  // s0 survives
 }
 
-// The detached fracture segment (maximal lower-dimensional cells) survives
-// agglomeration of the bulk untouched.
+// Witnesses mixed-dimensional passthrough: a maximal lower-dimensional
+// stratum survives agglomeration of the bulk untouched.
 GRAPHOS_TEST(preserves_maximal_lower_dimensional_cells) {
   graphos::Complex c(2);
   c.attach_vertices(5);
@@ -60,8 +60,8 @@ GRAPHOS_TEST(preserves_maximal_lower_dimensional_cells) {
 }
 
 GRAPHOS_TEST(detects_inconsistent_orientation) {
-  // the raw disk fixture references the shared edge with +1 from both
-  // faces: the coefficient would be 2
+  // the raw disk references the shared 1-cell with +1 from both cofaces, so
+  // the coefficient would be 2 and the merge is rejected
   const graphos::Complex c = graphos_test::make_two_triangle_disk();
   CHECK_THROWS(graphos::agglomerate(c, {0, 0}));
 }

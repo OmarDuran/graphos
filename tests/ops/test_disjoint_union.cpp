@@ -23,7 +23,7 @@ GRAPHOS_TEST(chain_maps_shift_b_after_a) {
   CHECK(du.b_map.index[0][0] == 3);
   CHECK(du.b_map.index[0][1] == 4);
   CHECK(du.b_map.index[1][0] == 3);
-  // B's edge references B's shifted vertices
+  // B's 1-cell references B's shifted vertices
   const graphos::BoundaryOperator& e = du.complex.boundary(1);
   CHECK(e.indices[e.offsets[3]] == 3);
   CHECK(e.indices[e.offsets[3] + 1] == 4);

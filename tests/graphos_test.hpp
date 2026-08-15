@@ -4,9 +4,9 @@
 #include <utility>
 #include <vector>
 
-// Minimal zero-dependency unit-test harness: GRAPHOS_TEST cases
-// self-register, GRAPHOS_TEST_MAIN() runs them all. One executable per
-// tested header; ctest registers each executable as one test.
+// Minimal zero-dependency harness: GRAPHOS_TEST cases self-register and
+// GRAPHOS_TEST_MAIN() runs them. One executable per tested header, each
+// registered with ctest as one test.
 
 namespace graphos_test {
 

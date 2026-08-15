@@ -6,7 +6,7 @@ using graphos::Index;
 
 namespace {
 
-// circle: three vertices, three edges, no faces (χ = 0)
+// the circle: three vertices, three 1-cells, χ = 0
 graphos::Complex make_circle() {
   graphos::Complex c(1);
   c.attach_vertices(3);

@@ -25,8 +25,8 @@ GRAPHOS_TEST(vertex_to_edge_cofaces_of_triangle) {
 }
 
 GRAPHOS_TEST(coboundary_carries_the_transposed_signs) {
-  // edges [a,b] enter with -1 at a and +1 at b, so δ_0 rows mirror that:
-  // v0 is the tail of e0 (-1) and the head of e2 (+1)
+  // a 1-cell [a,b] enters with −1 at a and +1 at b, so the δ₀ rows mirror it:
+  // v0 is the tail of e0 (−1) and the head of e2 (+1)
   const graphos::Complex c = graphos_test::make_triangle();
   const graphos::CoboundaryOperator a = graphos::coboundary(c, 0);
   CHECK(row_signs(a, 0) == (std::vector<int>{-1, +1}));
