@@ -65,7 +65,10 @@ void check_dim(std::size_t k, std::size_t n, const char* what) {
 }  // namespace
 
 PYBIND11_MODULE(_core, m) {
-  m.doc() = "graphos: a metric-free engine for finite cell complexes: stratified signed incidence, the boundary and coboundary operators, and an operation calculus that returns the induced chain maps";
+  m.doc() =
+      "graphos: a metric-free engine for finite cell complexes: stratified signed incidence, the "
+      "boundary and coboundary operators, and an operation calculus that returns the induced chain "
+      "maps";
   m.attr("INVALID_INDEX") = invalid_index;
 
   // ---- the complex and its operators -----------------------------------
@@ -322,8 +325,7 @@ PYBIND11_MODULE(_core, m) {
       .def_readonly("map", &SubcomplexResult::map)
       .def_readonly("embedding", &SubcomplexResult::embedding);
   // overloaded (with and without precomputed δ)
-  m.def("subcomplex",
-        static_cast<SubcomplexResult (*)(const Complex&, const Marker&)>(&subcomplex),
+  m.def("subcomplex", static_cast<SubcomplexResult (*)(const Complex&, const Marker&)>(&subcomplex),
         py::arg("complex"), py::arg("cells"));
 
   py::class_<CutResult>(m, "CutResult")
@@ -347,8 +349,7 @@ PYBIND11_MODULE(_core, m) {
       .def_readonly("map", &OrientationResult::map)
       .def_readonly("orientable", &OrientationResult::orientable);
   // overloaded (explicit stratum and top-stratum default)
-  m.def("orient", static_cast<OrientationResult (*)(const Complex&)>(&orient),
-        py::arg("complex"));
+  m.def("orient", static_cast<OrientationResult (*)(const Complex&)>(&orient), py::arg("complex"));
 
   py::class_<AgglomerationResult>(m, "AgglomerationResult")
       .def_readonly("complex", &AgglomerationResult::complex)

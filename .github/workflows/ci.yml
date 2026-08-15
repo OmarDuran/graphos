@@ -45,7 +45,7 @@ jobs:
     name: 0. format
     runs-on: ubuntu-latest
     env:
-      CLANG_FORMAT_VERSION: "21"
+      CLANG_FORMAT_VERSION: "20"
     steps:
       - uses: actions/checkout@v4
       - name: install clang-format
