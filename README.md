@@ -25,56 +25,56 @@ The surface, in the vocabulary of THEORY.md:
 | **complex** | C = (N₀, …, N_n ; ∂₁, …, ∂_n); a chain complex exactly when ∂∘∂ = 0, which `d_squared_is_zero` decides |
 | **boundary operator ∂_k** | ∂_k ∈ {−1, 0, +1}^{N_{k−1} × N_k} in signed CSR; row σ holds the (k−1)-faces τ of σ with [σ : τ] |
 | **attaching a cell** | `attach_cell` — a k-cell along the (k−1)-chain ∂σ, the CW paradigm |
-| **mesh ingestion** | `from_polygons` (vertex cycles), `from_polyhedra` (polygonal face lists — the general polymesh form), `from_edges`, and `from_simplices(d, …)` for d-simplices in ANY dimension (all strata derived, top cells oriented by input-order parity). Deterministic orientation conventions, ∂∘∂ = 0 by construction. Polytopal first: any polygon, any polyhedron, any mix |
+| **mesh ingestion** | `from_edges`, `from_polygons` (vertex cycles), `from_polyhedra` (face lists), `from_simplices(d, …)` in any dimension. Intermediate strata are derived, orientation conventions are deterministic, and ∂∘∂ = 0 holds by construction |
 | **chain map** | f_* : C_k(C) → C_k(C′), induced on generators by every operation; a generator may be sent to 0 |
-| **coproduct** | `disjoint_union(a, b)` |
-| **quotient** | `quotient(c, identifications)` — glue cells together, orientation flips propagate through stars |
-| **parallel cells** | `find_parallel_cells(c, k)` — cells with equal boundary chains up to a uniform flip |
-| **pushout A ⊔_C B** | `pushout(a, b, vertex_identifications)` — union glued along the shared subcomplex; the combinatorial core of BRep/domain union and mesh conformity |
-| **star deletion** | `star_deletion(c, marker)` — remove marked cells and their closed stars (upward cascade); the combinatorial core of domain difference |
-| **cutting along a subcomplex** | `cut_along(c, interface_marker)` — split the complex along a marked interface: sides are connected components of each closure cell's cut star, each side gets a copy, originals survive as the detached interface (fracture) domain. Tips/rims (one side) are not copied; junctions (3+ sides) get one copy per side. Purely topological — no geometric side test needed |
-| **coboundary δ_k** | `coboundary(c, k)` — the signed transpose of ∂_{k+1}; applying it to a k-cochain is the discrete differential |
-| **incidence I(k, j)** | `incidence(c, k, j)` — unsigned transitive incidence: per k-cell, the j-cells of its closure (j < k), star (j > k), or itself. The substrate of DoF gathers and NetworkX incidence views; deliberately unsigned (multi-level sign compositions telescope — that is ∂∘∂ = 0) |
-| **connected components** | `connected_components(c, k, via[, exclude])` — components of k-cells through shared via-cells (excluding marked connectors = the sides-of-a-cut computation); `connected_components(c)` — β₀ of the whole mixed-dimensional complex |
-| **product A × B** | `product(a, b)` — Cartesian product with Leibniz-rule boundary, ∂(α×β) = ∂α×β + (−1)^{dim α} α×∂β; `product(mesh, segment)` is extrusion. χ multiplies; factor structure returned as blocks |
-| **lifting identifications** | `lift_identifications(c, vertex_pairs)` — extend a vertex pairing upward through the strata by boundary-chain matching (orientation flips reported); with `quotient`, periodic boundary conditions in two calls |
-| **barycentric subdivision** | `barycentric_subdivision(c)` — the order complex of the face poset: one vertex per cell, one k-simplex per strict chain of k+1 cells. Simplicial output from ANY complex; the carrier map (maximal chain element) is the refinement/prolongation relation, and the SIGNED carrier (incidence product along the flag) is the subdivision chain map — refinement transfers orientation rather than leaving it to the caller |
-| **dual complex** | `dual(frozen)` → `DualView` — the poset order-reversed, zero-copy: dual k-cells are primal (n−k)-cells, ∂^dual_k = δ_{n−k}. The combinatorial half of the DEC dual mesh; exokalk adds geometry via the subdivision |
+| **coproduct** | `disjoint_union(a, b)` — A ⊔ B, strata concatenated; the factors may differ in dimension |
+| **quotient** | `quotient(c, identifications)` — C/~; an orientation flip propagates into st(σ) |
+| **parallel cells** | `find_parallel_cells(c, k)` — k-cells whose boundary chains agree as signed sets up to a uniform flip |
+| **pushout A ⊔_C B** | `pushout(a, b, vertex_identifications)` — glued along the subcomplex C the identified vertices generate; deduplication extends C upward and makes the interface conforming |
+| **star deletion** | `star_deletion(c, marker)` — removes st(S), leaving the largest subcomplex meeting no marked cell |
+| **cutting along a subcomplex** | `cut_along(c, interface_marker)` — for x ∈ cl(S), the sides are the incidence-connected components of st(x) ∖ cl(S), each receiving a copy of x. cl(S) survives as a detached subcomplex; a one-sided rim is not copied, giving the crack front, and a junction gets one copy per side. No geometric side test enters |
+| **coboundary δ_k** | `coboundary(c, k)` — δ_k = ∂_{k+1}^T; applied to a k-cochain it is the discrete exterior derivative |
+| **incidence I(k, j)** | `incidence(c, k, j)` — per k-cell σ, the j-cells of cl(σ) (j < k), of st(σ) (j > k), or σ itself. Unsigned by necessity: a multi-level composite of incidence numbers telescopes to 0 by ∂∘∂ = 0 |
+| **connected components** | `connected_components(c, k, via[, exclude])` — components of k-cells adjacent through a common via-cell; excluding marked connectors gives the sides of a cut. `connected_components(c)` is β₀ of the whole complex |
+| **product A × B** | `product(a, b)` — ∂(α × β) = ∂α × β + (−1)^{dim α} α × ∂β. `product(mesh, segment)` is extrusion; χ(A × B) = χ(A) · χ(B); the factor structure survives in `blocks` |
+| **lifting identifications** | `lift_identifications(c, vertex_pairs)` — extends a vertex pairing upward by boundary-chain matching, reporting rel_sign. With `quotient`, a periodic identification in two calls: a square becomes a cylinder, a twisted pairing a Möbius band |
+| **barycentric subdivision** | `barycentric_subdivision(c)` — sd(C), the order complex of the face poset: one vertex per cell, one k-simplex per strict chain of k+1 cells. Simplicial from any complex. The carrier is the refinement relation; the signed carrier ∏ᵢ [cᵢ : cᵢ₊₁] is the subdivision chain map, so refinement transfers orientation |
+| **dual complex** | `dual(frozen)` → `DualView` — the face poset order-reversed, zero-copy: the dual k-cell is the primal (n−k)-cell and ∂^dual_k = δ_{n−k}. The combinatorial half of the DEC dual mesh |
 | **orientation** | `orient(c, k)` — coherently orients the maximal cells of stratum k, so every interior facet is induced with opposite incidence numbers, or reports non-orientability. The orientation classes are returned: coherence leaves exactly one free sign per class, which only a geometric notion of outward can settle |
-| **Betti numbers (Z₂)** | `betti_numbers_z2(c)` — β_k by boundary-matrix reduction mod 2: components, tunnels, cavities; the dimension counts behind well-posedness of mixed formulations on multiply-connected domains |
-| **manifoldness** | `check_manifold(c)` — necessary conditions with an offending-cell marker: purity, facet coface counts, link connectivity (pinch detection) |
-| **agglomeration** | `agglomerate(c, labels)` — merge top cells into polytopal aggregates (interior facets cancel — inconsistent orientation is detected); the inverse of refinement, for multigrid/multiscale coarse spaces |
-| **replacement (incremental imprinting)** | `replace(c, region, patch, vertex_glue)` — excision + amalgamation fused: excise the region's open star, amalgamate a patch along the frontier via a vertex glue lifted through the strata. The primitive of cut-cell workflows: imprint a fault through a cell without rebuilding the complex |
-| **coarsening (dimensional descent)** | `coarsen(c, labels[, protected])` — agglomeration applied down the dimension ladder: cells, then interface patches, then edge chains (vertices only relabel — merging them is `quotient`'s job). Patches merge only when orientable, coefficient-clean, open, and coface-consistent — otherwise graceful singleton fallback. `protected` cells are caller-declared barriers (metric-free graphos cannot know corners); protecting the coarse lattice frame recovers refined tensor meshes EXACTLY |
-| **relative homology** | `betti_numbers_z2(c, rel)` — β_k(K, A; Z₂) with A = cl(marked); makes the excision isomorphism H_k(K, cl st S) ≅ H_k(K∖st S, frontier S) computable on both sides |
-| **join A ∗ B** | `join(a, b)` — ∂(α∗β) = ∂α∗β + (−1)^{dim α+1} α∗∂β, factors embedded as subcomplexes; join(point, X) is the cone, join(S⁰, X) the suspension |
-| **neighborhood markers** | `star_of`, `closure_of`, `link_of`, `frontier_of` — set-level st(S), cl(S), lk(S) = cl(st S)∖st(cl S), and the excision frontier cl(st S)∖st(S) (the void boundary a pushout patch glues to) |
-| **elementary collapse** | `free_faces(c)` (unique coface, single occurrence) and `collapse(c)` — greedy Whitehead collapsing to a free-face-free core; every step a simple homotopy equivalence |
-| **frozen complex** | `freeze(c)` → `FrozenComplex` — the immutable query object: ∂ and δ in device-capable storage (`exec::Array`, the CHAI seam), host row access, kernel views |
-| **star / closure / link** | `FrozenComplex::star/closure/link(k, cell)` — st(σ), cl(σ), lk(σ) = cl(st(σ)) \ st(cl(σ)); the queries NetworkX views will sit on |
+| **Betti numbers (Z₂)** | `betti_numbers_z2(c)` — β_k = N_k − rank ∂_k − rank ∂_{k+1} by reduction mod 2. These fix the dimension of the harmonic space, hence well-posedness of mixed formulations on multiply-connected domains |
+| **manifoldness** | `check_manifold(c)` — the decidable necessary conditions, with an offending-cell marker: purity, facet coface counts, connectivity of st(σ) for dim σ ≤ n−2 |
+| **agglomeration** | `agglomerate(c, labels)` — merges top cells into aggregates with boundary Σ ∂(members); interior facets cancel exactly when the stratum is coherently oriented, and an incoherent one is detected |
+| **replacement** | `replace(c, region, patch, vertex_glue)` — excision and amalgamation fused: excise st(S), glue a patch along the frontier through a vertex correspondence lifted by boundary-chain matching. Imprints an interface through a cell without rebuilding the complex |
+| **coarsening** | `coarsen(c, labels[, protected])` — agglomeration by dimensional descent: top cells, then interface patches, then 1-chains; vertices only relabel. A patch merges only if coherently orientable, coefficient-clean, open and coface-consistent, else its members stay singletons. `protected` cells are declared barriers, since a metric-free engine cannot locate a corner; protecting the coarse lattice frame inverts tensor refinement exactly |
+| **relative homology** | `betti_numbers_z2(c, rel)` — β_k(K, A; Z₂) with A = cl(marked), making the excision isomorphism H_k(K, cl st S) ≅ H_k(K ∖ st S, frontier S) computable on both sides |
+| **join A ∗ B** | `join(a, b)` — ∂(α ∗ β) = ∂α ∗ β + (−1)^{dim α+1} α ∗ ∂β, both factors embedded. join(point, X) is the cone, join(S⁰, X) the suspension, and cl(st σ) ≅ σ ∗ lk(σ) becomes computable on both sides |
+| **neighbourhood markers** | `star_of`, `closure_of`, `link_of`, `frontier_of` — st(S), cl(S), lk(S) = cl(st S) ∖ st(cl S), and the frontier cl(st S) ∖ st(S), which bounds the void a pushout patch glues to |
+| **elementary collapse** | `free_faces(c)` — τ with one proper coface, occurring once in ∂σ — and `collapse(c)`, which removes free pairs until none remains. Every step is a simple homotopy equivalence, so the homotopy type is preserved |
+| **frozen complex** | `freeze(c)` → `FrozenComplex` — the immutable object queries sit on: ∂ and δ in device-capable storage (`exec::Array`, the CHAI seam), with host rows and kernel views |
+| **star / closure / link** | `FrozenComplex::star/closure/link(k, cell)` — st(σ), cl(σ), lk(σ) = cl(st σ) ∖ st(cl σ), per cell |
 | **marker** | `Marker` — a selection of cells, evaluated locally and meaningful collectively (`mark`, `mark_where(k, pred)`); the argument form of every operation on a subcomplex |
-| **closed subcomplex** | `subcomplex(c, marker)` — cl(marked): the marked cells with their full closure, extracted as its own complex with both chain maps (parent→sub and the embedding sub→parent). Fracture domains, material regions, boundary complexes, k-skeleta |
-| **facet classification** | `classify_facets(c)` — every (n−1)-cell into exactly one of: free (0 cofaces — detached interface domains), boundary (1 — ∂Ω), interior (2), nonmanifold (3+ — DFN junctions). Compose with `subcomplex` to extract ∂Ω |
+| **closed subcomplex** | `subcomplex(c, marker)` — cl(S) as its own complex, with both chain maps. Interface domains, material regions, ∂K, and the k-skeleton are all instances |
+| **facet classification** | `classify_facets(c)` — partitions the facets by top-coface count: free (0, a detached interface), boundary (1, ∂K), interior (2), non-manifold (3+, a junction). With `subcomplex` it extracts ∂K |
 
-Decisions that require geometry ("these two vertices are the same point")
-enter as explicit `Identification` inputs; everything downstream is
+A decision that requires geometry — that two vertices are the same point —
+enters as an explicit `Identification`; everything downstream of it is
 combinatorial.
 
 ## Architecture
 
-- **Metric-free isolation.** No coordinates, lengths, areas, or normals ever
-  enter graphos. Topology is integer index spaces plus signed CSR incidence.
-- **Frozen complexes, bulk edits.** Operations are out-of-place
-  transformations: complex in, complex + chain map out. Fields (cochains)
-  attached to cells are transported through the chain maps.
-- **Flat arrays only.** The poset is CSR strata, never a pointer graph — the
-  precondition for GPU portability and zero-copy NetworkX views.
+- **Metric-free.** No coordinate, length, area or normal enters graphos. A
+  complex is integer index spaces with signed CSR incidence.
+- **Out-of-place operations.** Complex in, complex and chain map out; cochains
+  are transported by gathering through the chain map.
+- **Flat arrays.** The face poset is CSR strata, never a pointer graph — the
+  precondition for device portability and zero-copy views.
 - **Portability seams.** The RAJA-CHAI-Umpire triplet connects at three
   points:
   1. `exec::forall` / `exec::*_scan` ([exec/forall.hpp](include/graphos/exec/forall.hpp)) —
      kernel phases dispatch through RAJA policies (`GRAPHOS_ENABLE_RAJA`),
-     with an identical-semantics serial fallback. `star_deletion` is the
-     exemplar op in full kernel form (mark → cascade → scan → scatter).
+     with a serial fallback of identical semantics. `star_deletion` and
+     `subcomplex` are in full kernel form — mark → cascade → scan → scatter —
+     and are the shape the remaining operations are being moved to.
   2. `exec::Buffer<T>` ([exec/memory.hpp](include/graphos/exec/memory.hpp)) —
      kernel scratch drawn from Umpire pools (`GRAPHOS_ENABLE_UMPIRE`), plain
      heap otherwise.
@@ -82,13 +82,13 @@ combinatorial.
      persistent storage for frozen complexes, `chai::ManagedArray`-backed
      under `GRAPHOS_ENABLE_CHAI` (host fallback otherwise). `Complex` is the
      mutable builder; `freeze()` produces the immutable `FrozenComplex`
-     whose ∂/δ arrays and `CsrView`s are what device kernels will capture.
-     Device execution policies (CUDA/HIP/SYCL) are the remaining step.
+     whose ∂ and δ arrays and `CsrView`s a device kernel captures. Device
+     policies (CUDA/HIP/SYCL) do not exist yet — see the Roadmap.
 
 ## Queries
 
-Read-only questions live in `include/graphos/queries/`, separated from the
-transformations in `ops/`. The taxonomy:
+Read-only questions live in `queries/`, apart from the transformations in
+`ops/`:
 
 | Question | Where |
 |---|---|
@@ -101,18 +101,18 @@ transformations in `ops/`. The taxonomy:
 | Link sphere/ball property per vertex (exact for dim ≤ 3) | `queries/manifold.hpp` (`classify_vertex_links`) |
 | χ, Betti numbers (absolute and relative, Z₂) | `euler_characteristic` (core), `queries/homology.hpp` |
 | b₀ / component labels (with excluded connectors) | `queries/components.hpp` |
-| Global orientability | `ops/orient.hpp` (`orient().orientable` — an op, since it also constructs) |
-| Cellular amalgamation criteria: common boundary ∂σ ∩ ∂τ and its acyclicity, excess intersection cl σ ∩ cl τ ∖ cl(∂σ ∩ ∂τ), and the union-is-a-cell verdict | `queries/amalgamation.hpp` (`common_boundary`, `excess_intersection`, `amalgamates_to_cell`) |
+| Orientability of a stratum, and its orientation classes | `ops/orient.hpp` (`orient().orientable`, `.class_of`) — an operation, since it also constructs |
+| Amalgamation: ∂σ ∩ ∂τ and its Z₂-acyclicity, the excess cl σ ∩ cl τ ∖ cl(∂σ ∩ ∂τ), and whether σ ∪ τ is a cell | `queries/amalgamation.hpp` |
 
 ## Collective semantics (the SPMD contract)
 
-graphos is written so the same program runs unchanged on a laptop and on a
-cluster: every public operation is *specified* as collective, and the
-current serial implementation is the P = 1 special case. Distribution
-(global IDs, ParMETIS partitioning, halo exchange) will land inside
-`freeze()` and the ops as an implementation detail — not as an API change.
+Every public operation is *specified* as collective; the present serial
+implementation is the P = 1 case. Distribution — global IDs, ParMETIS
+partitioning, halo exchange — is intended to land inside `freeze()` and the
+operations without an API change. None of it exists yet (see the Roadmap);
+what follows is the contract it will honour.
 
-Every public operation carries one of three contracts (PETSc vocabulary):
+Three contracts, in PETSc vocabulary:
 
 | Contract | Meaning | Operations |
 |---|---|---|
@@ -122,50 +122,47 @@ Every public operation carries one of three contracts (PETSc vocabulary):
 
 Two disciplines follow:
 
-1. **The one law**: a distributed program must call the collective
-   operations in the same order on every rank — never branch a
-   topology-changing call on rank-local data. This is the only way
-   distribution is visible in user code.
-2. **Selection is by marking, not by index lists**: ops take a `Marker`,
-   marked locally (`mark_where(k, predicate)` is the canonical form). A
-   predicate evaluates on each rank over its own cells, so the same program
-   text is meaningful at any rank count.
+1. **Same order on every rank.** A distributed program must call the
+   collective operations in one order — never branch a topology-changing call
+   on rank-local data. This is the only way distribution appears in user code.
+2. **Selection by marking, not by index list.** Operations take a `Marker`,
+   marked locally; `mark_where(k, predicate)` is the canonical form. The
+   predicate runs on each rank over its own cells, so the same program text is
+   meaningful at any rank count.
 
 `freeze(c, halo_depth)` records the ghost-ring depth (default 1) that Local
 queries are guaranteed correct within.
 
 ## Python bindings
 
-`-DGRAPHOS_BUILD_PYTHON=ON` builds `graphos._core` (pybind11, fetched
-automatically) into `python/graphos/`; run with `PYTHONPATH=python`. The
-whole calculus and query surface is exposed with the same names; markers
-take Python callables as predicates (`marker.mark_where(1, lambda e: ...)`),
-identifications and glue are lists of `(from, to[, sign])` tuples, and
-chain maps come back as NumPy arrays. Lifetime follows the builder/frozen
-split: accessors on `Complex` and on operation results return array
-copies; `FrozenComplex.boundary/coboundary` return zero-copy views whose
-base keeps the frozen complex alive. `python/tests/test_graphos.py`
-re-asserts the mathematical certificates through the bindings and runs as
-the `python.test_graphos` ctest entry.
+`-DGRAPHOS_BUILD_PYTHON=ON` builds `graphos._core` (pybind11, pinned) into
+`python/graphos/`; run with `PYTHONPATH=python`. The whole calculus and query
+surface carries the same names: a marker takes a Python predicate
+(`marker.mark_where(1, lambda e: ...)`), identifications and glue are
+`(from, to[, sign])` tuples, and chain maps return as NumPy arrays.
+
+Lifetime follows the builder/frozen split — accessors on `Complex` and on
+operation results return copies, while `FrozenComplex.boundary/coboundary`
+return zero-copy views whose base keeps the complex alive.
+`python/tests/test_graphos.py` re-asserts the laws through the bindings as the
+`python.test_graphos` ctest entry.
 
 ### NetworkX integration (`graphos.nx`)
 
-Read-only graph **views** duck-type the NetworkX protocol directly over
-the CSR arrays — `hasse_graph(frozen)` (nodes `(dim, index)`, arcs cell →
-face with the orientation sign as an edge attribute), `incidence_graph(c,
-k, j)` (the nfempy `build_graph(dim, codim)` shape), and
-`adjacency_graph(c, k, via[, exclude])` (the mesh dual graph and its
-generalizations). Each has `.to_networkx()` for guaranteed interop.
+Read-only views duck-type the NetworkX protocol directly over the CSR
+arrays: `hasse_graph(frozen)` — the face poset, nodes `(dim, index)` and arcs
+σ → τ carrying [σ : τ] as an edge attribute — `incidence_graph(c, k, j)` for
+I(k, j), and `adjacency_graph(c, k, via[, exclude])` for adjacency through a
+via-stratum. Each has `.to_networkx()` for guaranteed interop.
 
-The views carry `__networkx_backend__ = "graphos"`, and the package
-registers the **"graphos" NetworkX backend** (via the packaging entry
-point; the source tree ships discovery metadata so `PYTHONPATH=python`
-works too): plain `nx.connected_components(adjacency_graph(...))`
-dispatches to the native C++ engine — including the sides-of-a-cut
-computation via the `exclude` marker — and algorithms without a native
-implementation fall back through conversion when
-`nx.config.fallback_to_nx` is enabled. `python/tests/test_networkx.py`
-covers protocol, dispatch, and fallback.
+The views carry `__networkx_backend__ = "graphos"` and the package registers
+the backend through the packaging entry point, with discovery metadata in the
+source tree so `PYTHONPATH=python` works too. A plain
+`nx.connected_components(adjacency_graph(...))` then dispatches to the C++
+engine — the sides-of-a-cut computation included, through the `exclude`
+marker — and an algorithm with no native implementation falls back through
+conversion when `nx.config.fallback_to_nx` is set.
+`python/tests/test_networkx.py` covers protocol, dispatch and fallback.
 
 ## Build, test, install
 
@@ -185,22 +182,21 @@ RAJA/Umpire/CHAI stack via the bundled Spack environment
 Requires CMake ≥ 3.20 and a C++20 compiler; the default build has no other
 dependencies (header-only, `graphos::graphos` CMake target).
 
-Unit tests mirror the include tree — one test file per header, one ctest
-entry per file (`tests/core/test_complex.cpp` ↔
-`include/graphos/core/complex.hpp`, registered as `core.test_complex`), with
-a zero-dependency harness in `tests/graphos_test.hpp` and shared complexes
-in `tests/fixtures.hpp`. Run a single suite with e.g.
-`ctest --test-dir build -R ops.test_cut`.
+Unit tests mirror the include tree: one file per header, one ctest entry per
+file (`tests/core/test_complex.cpp` ↔ `include/graphos/core/complex.hpp`,
+registered as `core.test_complex`), on a zero-dependency harness in
+`tests/graphos_test.hpp` with shared complexes in `tests/fixtures.hpp`. Run
+one suite with `ctest --test-dir build -R ops.test_cut`.
 
 Beyond the unit suites:
 
 - **Property-based fuzzing** (`property.test_properties`): random complexes
-  through random op sequences, asserting the algebra's laws (validate,
-  ∂∘∂ = 0, Euler–Poincaré, chain-map validity, collapse homotopy
-  invariance) after every step.
-- **Scaling assertions** (`property.test_scaling`): each op's runtime is
-  checked against its complexity model on 8×-grown meshes — a complexity
-  regression turns the suite red.
+  through random operation sequences, asserting the laws after every step —
+  the structural invariants, ∂∘∂ = 0, Euler–Poincaré, chain-map validity, and
+  homotopy invariance under collapse.
+- **Scaling assertions** (`property.test_scaling`): each operation's runtime
+  against its complexity model on 8×-grown complexes, so a change of
+  complexity class fails.
 - **Performance guards** (`property.test_performance`): stored bytes/cell
   asserted against the CSR memory model (structural bloat fails
   deterministically), and bulk-op throughput asserted against the
@@ -214,8 +210,9 @@ Beyond the unit suites:
   structure, every seam facet connects exactly the parents of its fine
   cofaces, and level-by-level coarsening equals one-step coarsening with
   identical chain maps.
-- **Benchmarks** (`bench/graphos_bench [n ...]`): structured tet grids,
-  per-op wall time and throughput; the numbers behind any performance claim.
+- **Benchmarks** (`bench/graphos_bench [n ...]`): structured simplicial
+  grids, per-operation wall time and throughput — the evidence behind any
+  performance claim.
 - **Sanitizers**: `-DGRAPHOS_SANITIZE=address,undefined` applies ASan/UBSan
   to everything in the tree.
 - **CI** (`.github/workflows/ci.yml`): a `format` check
@@ -246,17 +243,21 @@ Shipped since this list was last written: the Python bindings and the
 NetworkX 3.x backend (§ Python bindings), and the staged installation CI with
 its container (§ Build, test, install).
 
-1. **Kernel form for the remaining operations.** `cut_along` — side labelling
-   as parallel label propagation — and `quotient`, following the
-   mark → cascade → scan → scatter shape `star_deletion` already has. Plus
-   3-dimensional cut coverage, branching interfaces included.
-2. **Device execution.** CUDA/HIP/SYCL policies for the bulk kernels over the
-   frozen storage, and a CHAI-enabled CI build. The operations are written to
-   survive this unchanged; what is missing is the policies and the evidence.
+1. **Kernel form for the operation calculus.** Two of the fifteen operations
+   go through the exec seam today — `star_deletion` and `subcomplex`, in the
+   mark → cascade → scan → scatter shape. The other thirteen are serial host
+   code: `cut_along` (side labelling as parallel label propagation) and
+   `quotient` are the load-bearing ones, then `agglomerate`, `coarsen`,
+   `orient`, `subdivision` and the rest. Also 3-dimensional cut coverage,
+   branching interfaces included.
+2. **Device execution.** No CUDA/HIP/SYCL policy exists yet; `exec::forall`
+   dispatches to RAJA host policies or to plain loops. Device policies over
+   the frozen storage, and a CHAI-enabled CI build, follow (1) — there is
+   little to move to a device until the operations are in kernel form.
 3. **Fixed-arity strided storage.** A complex of a single cell type needs no
    offset array, only a stride — the specialization `BoundaryOperator`
    anticipates.
-4. **Distributed layer.** Global IDs, METIS/ParMETIS partitioning, and MPI
-   halo exchange inside `freeze()` and the operations. The collective
-   contracts in § Collective semantics are already specified for it; today
-   every one of them is the P = 1 case.
+4. **Distributed layer.** Global IDs, METIS/ParMETIS partitioning and MPI halo
+   exchange inside `freeze()` and the operations. The contracts in
+   § Collective semantics are written for it; today every one is the P = 1
+   case, and no MPI or ParMETIS call exists in the tree.

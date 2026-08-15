@@ -1,12 +1,12 @@
 # Installing graphos
 
-graphos is a **header-only C++20 library**. There is nothing to compile to
-*use* it — installation copies headers and a CMake package so other projects
-can `find_package(graphos)`. The optional hardware-portability stack (RAJA,
-Umpire, CHAI) is only needed if you enable it.
+graphos is a **header-only C++20 library**. Nothing has to be compiled to use
+it: installing copies the headers and a CMake package so other projects can
+`find_package(graphos)`. The portability stack (RAJA, Umpire, CHAI) is needed
+only if you enable it.
 
-Requirements: **CMake ≥ 3.20** and a **C++20 compiler** (Apple Clang, Clang,
-or GCC). Nothing else for the default build.
+Requirements: **CMake ≥ 3.20** and a **C++20 compiler** (Apple Clang, Clang or
+GCC). Nothing else for the default build.
 
 ---
 
@@ -30,9 +30,8 @@ ctest --test-dir build
 cmake --install build --prefix ~/opt/graphos
 ```
 
-Pick any prefix you like. Without `--prefix` the install goes to the
-configure-time `CMAKE_INSTALL_PREFIX` (default `/usr/local`, which needs
-`sudo`).
+Any prefix works. Without `--prefix` the install goes to the configure-time
+`CMAKE_INSTALL_PREFIX`, default `/usr/local`, which needs `sudo`.
 
 ### What gets installed
 
@@ -61,7 +60,7 @@ cmake -S . -B build -DCMAKE_PREFIX_PATH=$HOME/opt/graphos
 
 ### Without CMake
 
-graphos is header-only — add the include directory and C++20:
+Header-only, so the include directory and C++20 are enough:
 
 ```bash
 c++ -std=c++20 -I$HOME/opt/graphos/include my_program.cpp -o my_program
@@ -76,21 +75,26 @@ c++ -std=c++20 -I$HOME/opt/graphos/include my_program.cpp -o my_program
 | `GRAPHOS_ENABLE_RAJA` | `OFF` | `exec::forall`/scans dispatch through RAJA policies |
 | `GRAPHOS_ENABLE_UMPIRE` | `OFF` | `exec::Buffer` allocates from Umpire memory pools |
 | `GRAPHOS_ENABLE_CHAI` | `OFF` | Frozen-complex storage (`exec::Array`) uses `chai::ManagedArray` |
-| `GRAPHOS_FETCH_TPL` | `OFF` | Download+build RAJA/Umpire via FetchContent instead of `find_package` (development only; skips the install export, and CHAI is not fetchable this way) |
-| `CMAKE_INSTALL_PREFIX` | `/usr/local` | Install destination (or use `cmake --install build --prefix …`) |
+| `GRAPHOS_FETCH_TPL` | `OFF` | Download and build RAJA/Umpire with FetchContent instead of `find_package`. Development only: it skips the install export, and CHAI cannot be fetched this way |
+| `GRAPHOS_BUILD_BENCH` | `ON` | Build `graphos_bench` |
+| `GRAPHOS_BUILD_PYTHON` | `OFF` | Build the `graphos._core` bindings into `python/graphos/` (fetches pybind11, pinned) |
+| `GRAPHOS_SANITIZE` | *(empty)* | Sanitizers for tests and bench, e.g. `address,undefined`. Top-level builds only |
+| `BUILD_TESTING` | `ON` | Standard CTest switch; `OFF` skips the test tree |
+| `CMAKE_INSTALL_PREFIX` | `/usr/local` | Install destination, or use `cmake --install build --prefix …` |
 
-Each `GRAPHOS_ENABLE_*` option locates its library with `find_package`, so
-the TPLs must be installed and discoverable (see the Spack section). The
-installed `graphosConfig.cmake` remembers which options were on and
-re-finds those dependencies for consumers automatically.
+Each `GRAPHOS_ENABLE_*` option locates its library with `find_package`, so the
+TPLs must be installed and discoverable — see §4 and §5. The installed
+`graphosConfig.cmake` records which options were on and re-finds those
+dependencies for consumers.
 
 ---
 
 ## 4. The portability stack via Spack
 
 The repository ships a Spack environment ([spack.yaml](spack.yaml)) pinning
-RAJA, Umpire, and CHAI to the coordinated **2024.07** LLNL release line so
-the three agree on their shared dependencies (camp, BLT).
+RAJA, Umpire and CHAI to the coordinated **2024.07** LLNL release line, so the
+three agree on their shared dependencies (camp, BLT). If you would rather not
+use Spack, §5 builds the same line from source with one script.
 
 ### One-time Spack setup
 
@@ -118,9 +122,9 @@ spack env activate .
 spack install
 ```
 
-This builds RAJA, Umpire, and CHAI (plus camp/BLT) and links them into a
-single **view** at `.spack-env/view/` inside the repo (git-ignored). First
-build takes a while; afterwards the environment is cached.
+This builds RAJA, Umpire and CHAI (with camp and BLT) and links them into a
+single **view** at `.spack-env/view/`, git-ignored. The first build is slow;
+afterwards the environment is cached.
 
 ### Build graphos against the stack
 
@@ -142,9 +146,9 @@ ctest --test-dir build-portable
 cmake --install build-portable --prefix ~/opt/graphos
 ```
 
-Consumers of a portability-enabled install must also be able to find the
-TPLs — the simplest way is to configure them with the same
-`CMAKE_PREFIX_PATH` (view path first, then the graphos prefix):
+A consumer of a portability-enabled install must also find the TPLs. The
+simplest way is the same `CMAKE_PREFIX_PATH`, view first, then the graphos
+prefix:
 
 ```bash
 cmake -S . -B build "-DCMAKE_PREFIX_PATH=/path/to/graphos-repo/.spack-env/view;$HOME/opt/graphos"
@@ -163,9 +167,59 @@ CUDA on an H100:
 
 (`+rocm amdgpu_target=gfx90a` for AMD.) Then `spack install` again.
 
+Note that no device execution policy exists yet — building the stack with
+`+cuda` prepares the dependencies, but `exec::forall` still dispatches to host
+policies. See the Roadmap in [README.md](README.md).
+
 ---
 
-## 5. Troubleshooting
+## 5. The portability stack from source (no Spack)
+
+[scripts/build_tpls.sh](scripts/build_tpls.sh) builds the same 2024.07 line —
+camp, RAJA, Umpire, CHAI — into one prefix, using only git and CMake:
+
+```bash
+scripts/build_tpls.sh /opt/graphos-tpl
+```
+
+camp is built first and the other three are pointed at it, so the prefix holds
+one camp rather than three that happen to match. `JOBS`, `TPL_VERSION` and
+`RAJA_OPENMP` override the defaults.
+
+Then configure graphos against it exactly as with the Spack view:
+
+```bash
+cmake -S . -B build-portable -DCMAKE_BUILD_TYPE=Release \
+  -DGRAPHOS_ENABLE_RAJA=ON -DGRAPHOS_ENABLE_UMPIRE=ON -DGRAPHOS_ENABLE_CHAI=ON \
+  -DCMAKE_PREFIX_PATH=/opt/graphos-tpl
+```
+
+The CI workflow and the container call this same script, so all three build
+the stack one way. Editing the script invalidates the CI cache, which is why
+the cache key is its hash.
+
+---
+
+## 6. The container
+
+[Dockerfile](Dockerfile) runs the whole thing from a bare image, in the four
+stages the CI workflow uses:
+
+```bash
+docker build -t graphos .                    # every stage
+docker build -t graphos --target tested .    # stop after ctest
+docker build -t graphos --build-arg ENABLE_TPL=OFF .   # the no-TPL path
+```
+
+The stages are separate so a failure names its phase — `tpls` is a
+third-party problem, `library` is ours, `tested` is a behaviour change, and
+`consumer` means the install exports are wrong although everything built and
+passed. The final image carries the install at `/opt/graphos` with
+`CMAKE_PREFIX_PATH` already set.
+
+---
+
+## 7. Troubleshooting
 
 **`find_package(graphos)` fails** — pass the install prefix:
 `-DCMAKE_PREFIX_PATH=$HOME/opt/graphos` when configuring the consumer.
@@ -174,12 +228,11 @@ CUDA on an H100:
 the TPLs are not discoverable. Activate the Spack environment or pass
 `-DCMAKE_PREFIX_PATH=<repo>/.spack-env/view`.
 
-**Two Spack installations fighting each other** (e.g. one from Homebrew and
-a `~/spack` clone): they share `~/.spack` config but speak different config
-dialects, which surfaces as parse errors like
-`a single spec was requested, but parsed more than one`. Pick one — check
-`which spack` and `spack --version`, and invoke the one you mean by full
-path (`~/spack/bin/spack …`) or fix your `PATH`.
+**Two Spack installations in conflict** (say one from Homebrew and a
+`~/spack` clone): they share `~/.spack` but read different config dialects,
+which surfaces as `a single spec was requested, but parsed more than one`.
+Choose one — check `which spack` and `spack --version`, then invoke it by full
+path or fix `PATH`.
 
 **Bootstrap error `No module named 'clingo.ast'`** — the binary-cached
 concretizer does not match your Python. The most reliable fix is installing
@@ -189,11 +242,10 @@ clingo directly into the Python Spack runs on (bypasses bootstrap entirely):
 $(spack python -c "import sys; print(sys.executable)") -m pip install clingo
 ```
 
-**macOS: builds fail instantly with an empty log** (`make: no such file`) —
-Apple's `/usr/bin/make` is the ancient 3.81 and Homebrew installs GNU make
-as `gmake` only, while Spack invokes `<prefix>/bin/make`. Install
-`brew install make`, create a shim providing the `make` name, and register
-it:
+**macOS: builds fail immediately with an empty log** (`make: no such file`) —
+Apple ships make 3.81 and Homebrew installs GNU make as `gmake` only, while
+Spack invokes `<prefix>/bin/make`. Install `brew install make`, then shim the
+`make` name and register it:
 
 ```bash
 mkdir -p ~/.spack/shims/bin && ln -sf /opt/homebrew/bin/gmake ~/.spack/shims/bin/make
@@ -236,6 +288,12 @@ AppleClang and the fmt ≤ 11.0 this Umpire line pins. The bundled
 [spack.yaml](spack.yaml) sets `umpire ~fmt_header_only` for this reason;
 keep that variant if you edit the environment.
 
-**Install export was skipped** — you configured with `GRAPHOS_FETCH_TPL=ON`.
-That mode is for development; install builds must find the TPLs via
-`find_package` (the Spack view).
+**Install export was skipped** — the build was configured with
+`GRAPHOS_FETCH_TPL=ON`, which is a development mode. An install build must
+find the TPLs through `find_package`: the Spack view (§4) or the source prefix
+(§5).
+
+**The Python bindings fail to build with overload errors** — pybind11 is
+pinned in `python/CMakeLists.txt` for this reason. `GIT_TAG stable` is a
+moving tag and advanced to 3.x, whose stricter overload deduction breaks the
+bindings with no change on this side. Keep the pin.

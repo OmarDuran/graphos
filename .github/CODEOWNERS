@@ -1,0 +1,4 @@
+# Ownership of every path. The last matching pattern takes precedence, so a
+# narrower rule must appear below this one.
+
+*       @OmarDuran
