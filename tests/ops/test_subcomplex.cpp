@@ -1,6 +1,6 @@
 #include "fixtures.hpp"
-#include "graphos/ops/cut.hpp"
 #include "graphos/core/complex.hpp"
+#include "graphos/ops/cut.hpp"
 #include "graphos/ops/subcomplex.hpp"
 #include "graphos/queries/homology.hpp"
 #include "graphos_test.hpp"
@@ -128,8 +128,8 @@ bool agrees(const graphos::Complex& c, const std::vector<std::vector<graphos::In
     }
     // parent -> sub, against the dense ChainMap
     for (graphos::Index p = 0; p < c.count(k); ++p) {
-      if (graphos::to_local(sparse, k, p) != dense.map.index[static_cast<std::size_t>(k)][
-              static_cast<std::size_t>(p)]) {
+      if (graphos::to_local(sparse, k, p) !=
+          dense.map.index[static_cast<std::size_t>(k)][static_cast<std::size_t>(p)]) {
         return false;
       }
     }
