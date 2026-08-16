@@ -27,10 +27,18 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  # outside the checkout: a prefix inside the source tree makes CMake
-  # refuse to export any target whose include path points into it
-  TPL_PREFIX: ${{ runner.temp }}/tpl
+# TPL_PREFIX is defined per job, not at workflow level.
+#
+# Constraint: the prefix must lie outside the checkout. CMake refuses to
+# export a target whose interface include directories resolve inside the
+# source tree. $RUNNER_TEMP satisfies this; the `runner` context that names
+# it is in scope only in step-level expressions, and is unavailable in both
+# workflow-level and job-level `env:`.
+#
+# Phases 1-3 therefore assign TPL_PREFIX in their first step via $GITHUB_ENV,
+# which exposes it to later steps as $TPL_PREFIX and ${{ env.TPL_PREFIX }}.
+# All three run on ubuntu-latest, so $RUNNER_TEMP is identical across them and
+# phase 1 writes the cache at the path phases 2 and 3 restore.
 
 jobs:
   # ---- formatting, checked and never fixed ----------------------------------
@@ -67,13 +75,14 @@ jobs:
   # what most users take. It is checked first, on three toolchains, and does
   # not wait for anything.
   #
-  # ONE entry also builds the Python bindings. Nothing else in this workflow
-  # sets GRAPHOS_BUILD_PYTHON, so without it the bindings are never compiled
-  # and `python.test_graphos` / `python.test_networkx` never run -- a binding
-  # can silently stop exposing part of the documented surface and no job goes
-  # red. It is one entry rather than all three: the sanitized build would need
-  # the ASan runtime preloaded into the interpreter, and the point of this job
-  # is to stay fast.
+  # One entry sets GRAPHOS_BUILD_PYTHON=ON. No other job in this workflow sets
+  # it, so the bindings are otherwise never compiled and the python.test_graphos
+  # and python.test_networkx entries never register: a regression in the binding
+  # surface would not be observable in CI.
+  #
+  # ON for one entry rather than all three. The sanitized entry would require
+  # the ASan runtime preloaded into the interpreter (LD_PRELOAD), and this job
+  # is the fast path.
   baseline:
     name: baseline ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
@@ -116,13 +125,14 @@ jobs:
         with:
           python-version: "3.12"
       - name: python deps
-        # numpy is a hard dependency of the bindings, networkx of the backend
-        # test; the pinned version matches pyproject's networkx>=3.3
+        # numpy: required by the bindings. networkx: required by
+        # python.test_networkx. Bounds match pyproject.toml.
         if: matrix.python == 'ON'
         run: python -m pip install --upgrade numpy "networkx>=3.3"
       - name: configure
-        # PYTHON_EXECUTABLE is named explicitly so the bindings and the ctest
-        # entries use the interpreter set up above, not whatever the image ships
+        # PYTHON_EXECUTABLE is passed explicitly: pybind11 and the ctest
+        # entries must resolve the interpreter installed above rather than the
+        # image default.
         run: >
           cmake -S . -B build
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
@@ -133,14 +143,13 @@ jobs:
         run: cmake --build build -j 4
       - name: test
         run: ctest --test-dir build --output-on-failure
-      # the bindings are only meaningful if the python entries actually ran:
-      # a missing interpreter would otherwise skip them without failing
-      - name: the python suites really ran
+      # ctest reports success over the C++ entries alone if the python entries
+      # were never registered, so their presence is asserted explicitly.
+      - name: python entries are registered
         if: matrix.python == 'ON'
         run: |
           ctest --test-dir build -N | grep -q 'python.test_graphos'
           ctest --test-dir build -N | grep -q 'python.test_networkx'
-          echo "both python ctest entries are registered and ran above"
       - name: bench smoke
         run: ./build/bench/graphos_bench 8
 
@@ -152,6 +161,8 @@ jobs:
       key: ${{ steps.key.outputs.value }}
     steps:
       - uses: actions/checkout@v4
+      - name: tpl prefix
+        run: echo "TPL_PREFIX=$RUNNER_TEMP/tpl" >> "$GITHUB_ENV"
       - name: cache key
         id: key
         # the script is part of the key: change how the stack is built and the
@@ -177,6 +188,8 @@ jobs:
     needs: tpls
     steps:
       - uses: actions/checkout@v4
+      - name: tpl prefix
+        run: echo "TPL_PREFIX=$RUNNER_TEMP/tpl" >> "$GITHUB_ENV"
       - uses: actions/cache@v4
         with:
           path: ${{ env.TPL_PREFIX }}
@@ -212,6 +225,8 @@ jobs:
     needs: [tpls, library]
     steps:
       - uses: actions/checkout@v4
+      - name: tpl prefix
+        run: echo "TPL_PREFIX=$RUNNER_TEMP/tpl" >> "$GITHUB_ENV"
       - uses: actions/cache@v4
         with:
           path: ${{ env.TPL_PREFIX }}
