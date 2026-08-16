@@ -1,3 +1,6 @@
+#include <iterator>
+#include <map>
+
 #include "fixtures.hpp"
 #include "graphos/ops/agglomerate.hpp"
 #include "graphos/ops/orient.hpp"
@@ -71,6 +74,56 @@ GRAPHOS_TEST(rejects_bad_labels) {
   CHECK_THROWS(graphos::agglomerate(c, {0, 0, 1}));      // wrong size
   CHECK_THROWS(graphos::agglomerate(c, {0, 0, 2, 2}));   // id 1 unused
   CHECK_THROWS(graphos::agglomerate(c, {0, 0, -1, 1}));  // negative
+}
+
+// THE MAP IS A LABELLING, NOT A CHAIN MAP, and the direction is why.
+//
+// A coarse cell is a CHAIN of fine cells, so the aggregation ι runs
+// coarse → fine and is multi-valued; ChainMap is single-valued and carries its
+// transpose. That transpose does not commute with ∂: for one member σ of
+// aggregate A, ∂(πσ) is the boundary of ALL of A, while π(∂σ) is σ's share.
+GRAPHOS_TEST(the_labelling_is_not_a_chain_map_but_the_aggregation_is) {
+  const auto oriented = graphos::orient(graphos_test::make_two_triangle_disk());
+  const graphos::Complex& fine = oriented.complex;
+  const auto ag = graphos::agglomerate(fine, {0, 0});
+  CHECK(!graphos::commutes_with_boundary(fine, ag.complex, ag.map));
+
+  // a 2-cell fibre, so no single-valued map inverts it
+  int members = 0;
+  for (graphos::Index i = 0; i < fine.count(2); ++i) {
+    if (ag.map.index[2][static_cast<std::size_t>(i)] != graphos::invalid_index) ++members;
+  }
+  CHECK(members == 2);
+
+  // What does hold, and what a coarse operator rests on: ∂(Σ members) is the
+  // coarse boundary, the interior facet cancelling. The chain-map condition
+  // for ι, stated on chains because ι is not a map of generators.
+  std::map<graphos::Index, int> lhs;  // Σ ∂(members), in fine 1-cells
+  const graphos::BoundaryOperator& bf = fine.boundary(2);
+  for (graphos::Index i = 0; i < fine.count(2); ++i) {
+    const int sg = ag.map.sign[2][static_cast<std::size_t>(i)];
+    for (graphos::Index m = bf.offsets[i]; m < bf.offsets[i + 1]; ++m) {
+      lhs[bf.indices[m]] += sg * bf.signs[m];
+    }
+  }
+  for (auto it = lhs.begin(); it != lhs.end();) {
+    it = (it->second == 0) ? lhs.erase(it) : std::next(it);  // the interior cancels
+  }
+
+  std::vector<graphos::Index> fine_of(static_cast<std::size_t>(ag.complex.count(1)),
+                                      graphos::invalid_index);
+  for (graphos::Index e = 0; e < fine.count(1); ++e) {
+    const graphos::Index t = ag.map.index[1][static_cast<std::size_t>(e)];
+    if (t != graphos::invalid_index) fine_of[static_cast<std::size_t>(t)] = e;
+  }
+  std::map<graphos::Index, int> rhs;  // ∂(A), pulled back
+  const graphos::BoundaryOperator& bc = ag.complex.boundary(2);
+  for (graphos::Index m = bc.offsets[0]; m < bc.offsets[1]; ++m) {
+    const graphos::Index e = fine_of[static_cast<std::size_t>(bc.indices[m])];
+    CHECK(e != graphos::invalid_index);
+    rhs[e] += bc.signs[m] * ag.map.sign[1][static_cast<std::size_t>(e)];
+  }
+  CHECK(lhs == rhs);
 }
 
 GRAPHOS_TEST_MAIN()

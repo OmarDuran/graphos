@@ -1,5 +1,6 @@
 #include "fixtures.hpp"
 #include "graphos/ops/cut.hpp"
+#include "graphos/core/complex.hpp"
 #include "graphos/ops/subcomplex.hpp"
 #include "graphos/queries/homology.hpp"
 #include "graphos_test.hpp"
@@ -258,6 +259,26 @@ GRAPHOS_TEST(sparse_inherits_the_chain_complex_law) {
       }
     }
   }
+}
+
+// The inclusion cl(S) ↪ C is a chain map: ∂ is inherited, so it commutes.
+// Both extractions must satisfy it, being the same inclusion.
+GRAPHOS_TEST(the_embedding_is_a_chain_map) {
+  const graphos::Complex disk = graphos_test::make_two_triangle_disk();
+  graphos::Marker mk(disk);
+  mk.mark(2, 0);
+  const graphos::SubcomplexResult dense = graphos::subcomplex(disk, mk);
+  CHECK(graphos::commutes_with_boundary(dense.complex, disk, dense.embedding));
+
+  graphos::SubcomplexWorkspace ws(disk);
+  const graphos::SparseSubcomplexResult sparse = graphos::subcomplex_from(disk, {{}, {}, {0}}, ws);
+  CHECK(graphos::commutes_with_boundary(sparse.complex, disk, sparse.embedding));
+
+  // and for the 1-skeleton, where the inclusion is not top-dimensional
+  graphos::Marker skel(disk);
+  for (graphos::Index e = 0; e < disk.count(1); ++e) skel.mark(1, e);
+  const graphos::SubcomplexResult k1 = graphos::subcomplex(disk, skel);
+  CHECK(graphos::commutes_with_boundary(k1.complex, disk, k1.embedding));
 }
 
 GRAPHOS_TEST_MAIN()

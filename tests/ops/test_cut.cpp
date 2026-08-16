@@ -97,4 +97,19 @@ GRAPHOS_TEST(rejects_marks_outside_interface_dimension) {
   CHECK_THROWS(graphos::cut_along(other, graphos::Marker(c)));  // wrong complex
 }
 
+// A copy carries the ∂ of the cell it descends from, so the ancestor map is a
+// chain map and cochain transport through it commutes with d.
+GRAPHOS_TEST(the_ancestor_map_is_a_chain_map) {
+  const graphos::Complex disk = graphos_test::make_two_triangle_disk();
+  graphos::Marker iface(disk);
+  iface.mark(1, 1);
+  const graphos::CutResult cut = graphos::cut_along(disk, iface);
+  CHECK(graphos::commutes_with_boundary(cut.complex, disk, cut.ancestor));
+
+  // an empty cut is the identity, trivially a chain map
+  const graphos::Marker none(disk);
+  const graphos::CutResult id = graphos::cut_along(disk, none);
+  CHECK(graphos::commutes_with_boundary(id.complex, disk, id.ancestor));
+}
+
 GRAPHOS_TEST_MAIN()

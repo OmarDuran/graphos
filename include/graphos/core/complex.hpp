@@ -170,6 +170,50 @@ inline bool d_squared_is_zero(const Complex& c) {
   return true;
 }
 
+// ∂π = π∂ on every generator: π is a chain map C_*(a) → C_*(b), degree 0.
+// It then descends to homology, and its dual π* commutes with d — which is
+// what a level transition, a subcomplex embedding or a quotient must satisfy
+// for the coarse operator to discretize the same complex. invalid_index sends
+// a generator to 0; the zero map qualifies.
+inline bool commutes_with_boundary(const Complex& a, const Complex& b, const ChainMap& pi) {
+  if (static_cast<int>(pi.index.size()) <= a.dim()) return false;
+  for (int k = 0; k <= a.dim(); ++k) {
+    const std::size_t sk = static_cast<std::size_t>(k);
+    if (pi.index[sk].size() != static_cast<std::size_t>(a.count(k))) return false;
+    if (pi.sign[sk].size() != pi.index[sk].size()) return false;
+    for (const Index t : pi.index[sk]) {
+      if (t == invalid_index) continue;
+      if (k > b.dim() || t < 0 || t >= b.count(k)) return false;  // off the target complex
+    }
+  }
+  for (int k = 1; k <= a.dim(); ++k) {
+    const std::size_t sk = static_cast<std::size_t>(k);
+    const BoundaryOperator& ba = a.boundary(k);
+    for (Index e = 0; e < a.count(k); ++e) {
+      std::map<Index, int> acc;  // ∂(πe) − π(∂e), as a chain in b
+      const Index im = pi.index[sk][static_cast<std::size_t>(e)];
+      if (im != invalid_index) {
+        const int sg = pi.sign[sk][static_cast<std::size_t>(e)];
+        const BoundaryOperator& bb = b.boundary(k);
+        for (Index m = bb.offsets[im]; m < bb.offsets[im + 1]; ++m) {
+          acc[bb.indices[m]] += sg * bb.signs[m];
+        }
+      }
+      for (Index m = ba.offsets[e]; m < ba.offsets[e + 1]; ++m) {
+        const Index f = ba.indices[m];
+        const Index jm = pi.index[sk - 1][static_cast<std::size_t>(f)];
+        if (jm == invalid_index) continue;
+        acc[jm] -= ba.signs[m] * pi.sign[sk - 1][static_cast<std::size_t>(f)];
+      }
+      for (const auto& [g, v] : acc) {
+        (void)g;
+        if (v != 0) return false;
+      }
+    }
+  }
+  return true;
+}
+
 // χ(C) = Σ_k (−1)^k N_k. Rank-invariant.
 inline long long euler_characteristic(const Complex& c) {
   long long chi = 0;
