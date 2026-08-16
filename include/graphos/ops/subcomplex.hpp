@@ -1,5 +1,7 @@
 #pragma once
 
+#include <algorithm>
+#include <stdexcept>
 #include <utility>
 #include <vector>
 
@@ -149,6 +151,174 @@ inline SubcomplexResult subcomplex(const Complex& c, const Marker& cells,
   return detail::subcomplex_via(c, cells, [&](int k) -> const CoboundaryOperator& {
     return cob[static_cast<std::size_t>(k)];
   });
+}
+
+// cl(S) by descent through ∂, for a listed S.
+//
+// cl(S) = S ∪ ∂S ∪ ∂²S ∪ … is generated downward, so the face poset below S
+// enumerates it directly. subcomplex() above computes the same set upward —
+// σ ∈ cl(S) iff some coface of σ is kept — which needs δ and sweeps every
+// stratum. Descent needs neither.
+//
+// Sparse in all three arguments, not one: S arrives as index lists (a Marker
+// is Θ(N) flags), the traversal is the descent, and the dense parent → sub
+// ChainMap is dropped for to_local().
+//
+// Numbering is ascending in the parent index, matching the compaction scan
+// above, so for the same S the two agree cell for cell, ∂ row for ∂ row.
+// Dimension is the parent's, with empty upper strata, as in subcomplex().
+//
+// m = |cl(S)|, b = max facets per cell: O(m·b + m log m), against Θ(N).
+
+// Scratch for subcomplex_from: a local index per parent cell, and the cells of
+// cl(S) collected per dimension. The one Θ(N) structure, allocated per parent
+// complex and reused by every extraction from it.
+//
+// Left clean on exit: the descent resets the slots it touched, not the array.
+class SubcomplexWorkspace {
+ public:
+  explicit SubcomplexWorkspace(const Complex& c) : counts_(c.counts()) {
+    slot_.resize(counts_.size());
+    level_.resize(counts_.size());
+    for (std::size_t k = 0; k < counts_.size(); ++k) {
+      slot_[k].assign(static_cast<std::size_t>(counts_[k]), invalid_index);
+    }
+  }
+
+  int dim() const { return static_cast<int>(counts_.size()) - 1; }
+
+  void validate_for(const Complex& c) const {
+    if (c.counts() != counts_) {
+      throw std::invalid_argument("SubcomplexWorkspace: built for a complex of different shape");
+    }
+  }
+
+  // scratch, written by subcomplex_from and left clean between calls
+  std::vector<Index>& slot(int k) { return slot_[static_cast<std::size_t>(k)]; }
+  std::vector<Index>& level(int k) { return level_[static_cast<std::size_t>(k)]; }
+
+ private:
+  std::vector<Index> counts_;
+  std::vector<std::vector<Index>> slot_;
+  std::vector<std::vector<Index>> level_;
+};
+
+struct SparseSubcomplexResult {
+  Complex complex;
+  // sub → parent, total and strictly increasing per stratum
+  ChainMap embedding;
+};
+
+// parent → sub, or invalid_index off cl(S); the embedding is sorted.
+inline Index to_local(const SparseSubcomplexResult& r, int k, Index parent) {
+  if (k < 0 || k >= static_cast<int>(r.embedding.index.size())) return invalid_index;
+  const std::vector<Index>& e = r.embedding.index[static_cast<std::size_t>(k)];
+  const auto it = std::lower_bound(e.begin(), e.end(), parent);
+  if (it == e.end() || *it != parent) return invalid_index;
+  return static_cast<Index>(it - e.begin());
+}
+
+// seeds[k] holds the parent indices of S at dimension k. The vector may be
+// shorter than dim + 1; entries may repeat or arrive in any order.
+inline SparseSubcomplexResult subcomplex_from(const Complex& c,
+                                              const std::vector<std::vector<Index>>& seeds,
+                                              SubcomplexWorkspace& ws) {
+  const int dim = c.dim();
+  ws.validate_for(c);
+
+  // in cl(S), not yet numbered; overwritten by the numbering pass
+  constexpr Index reached = -2;
+
+  for (int k = 0; k <= dim; ++k) ws.level(k).clear();
+
+  for (int k = 0; k <= dim && k < static_cast<int>(seeds.size()); ++k) {
+    std::vector<Index>& slot = ws.slot(k);
+    for (const Index s : seeds[static_cast<std::size_t>(k)]) {
+      if (s < 0 || s >= c.count(k)) {
+        for (int j = 0; j <= dim; ++j) {  // the scratch stays clean on the error path
+          for (const Index p : ws.level(j)) ws.slot(j)[static_cast<std::size_t>(p)] = invalid_index;
+        }
+        throw std::out_of_range("subcomplex_from: seed index out of range");
+      }
+      if (slot[static_cast<std::size_t>(s)] == invalid_index) {
+        slot[static_cast<std::size_t>(s)] = reached;
+        ws.level(k).push_back(s);
+      }
+    }
+  }
+
+  // ∂-descent; stratum k is closed before it is read, k running downward
+  for (int k = dim; k >= 1; --k) {
+    const BoundaryOperator& bnd = c.boundary(k);
+    std::vector<Index>& slot_lo = ws.slot(k - 1);
+    std::vector<Index>& lo = ws.level(k - 1);
+    const std::vector<Index>& hi = ws.level(k);
+    for (std::size_t i = 0; i < hi.size(); ++i) {
+      const Index e = hi[i];
+      for (Index m = bnd.offsets[static_cast<std::size_t>(e)];
+           m < bnd.offsets[static_cast<std::size_t>(e) + 1]; ++m) {
+        const Index f = bnd.indices[static_cast<std::size_t>(m)];
+        if (slot_lo[static_cast<std::size_t>(f)] == invalid_index) {
+          slot_lo[static_cast<std::size_t>(f)] = reached;
+          lo.push_back(f);
+        }
+      }
+    }
+  }
+
+  // ascending parent order: the compaction scan's numbering
+  std::vector<Index> counts(static_cast<std::size_t>(dim) + 1, 0);
+  for (int k = 0; k <= dim; ++k) {
+    std::vector<Index>& lv = ws.level(k);
+    std::sort(lv.begin(), lv.end());
+    std::vector<Index>& slot = ws.slot(k);
+    for (std::size_t l = 0; l < lv.size(); ++l) {
+      slot[static_cast<std::size_t>(lv[l])] = static_cast<Index>(l);
+    }
+    counts[static_cast<std::size_t>(k)] = static_cast<Index>(lv.size());
+  }
+
+  // ∂ inherited; cl(S) is closed, so every face reference resolves
+  std::vector<BoundaryOperator> strata(static_cast<std::size_t>(dim) + 1);
+  for (int k = 1; k <= dim; ++k) {
+    const BoundaryOperator& bnd = c.boundary(k);
+    const std::vector<Index>& lv = ws.level(k);
+    const std::vector<Index>& slot_lo = ws.slot(k - 1);
+    BoundaryOperator& out = strata[static_cast<std::size_t>(k)];
+    out.offsets.assign(lv.size() + 1, 0);
+    for (std::size_t l = 0; l < lv.size(); ++l) {
+      const Index e = lv[l];
+      out.offsets[l + 1] = out.offsets[l] + (bnd.offsets[static_cast<std::size_t>(e) + 1] -
+                                             bnd.offsets[static_cast<std::size_t>(e)]);
+    }
+    out.indices.resize(static_cast<std::size_t>(out.offsets.back()));
+    out.signs.resize(static_cast<std::size_t>(out.offsets.back()));
+    for (std::size_t l = 0; l < lv.size(); ++l) {
+      const Index e = lv[l];
+      Index w = out.offsets[l];
+      for (Index m = bnd.offsets[static_cast<std::size_t>(e)];
+           m < bnd.offsets[static_cast<std::size_t>(e) + 1]; ++m) {
+        out.indices[static_cast<std::size_t>(w)] =
+            slot_lo[static_cast<std::size_t>(bnd.indices[static_cast<std::size_t>(m)])];
+        out.signs[static_cast<std::size_t>(w)] = bnd.signs[static_cast<std::size_t>(m)];
+        ++w;
+      }
+    }
+  }
+
+  // the sorted frontiers are the embedding
+  ChainMap embedding = ChainMap::sized(counts);
+  for (int k = 0; k <= dim; ++k) {
+    embedding.index[static_cast<std::size_t>(k)] = ws.level(k);
+  }
+
+  for (int k = 0; k <= dim; ++k) {
+    std::vector<Index>& slot = ws.slot(k);
+    for (const Index p : ws.level(k)) slot[static_cast<std::size_t>(p)] = invalid_index;
+  }
+
+  return SparseSubcomplexResult{Complex(std::move(counts), std::move(strata)),
+                                std::move(embedding)};
 }
 
 }  // namespace graphos

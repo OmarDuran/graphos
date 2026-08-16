@@ -28,7 +28,9 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  TPL_PREFIX: ${{ github.workspace }}/tpl
+  # outside the checkout: a prefix inside the source tree makes CMake
+  # refuse to export any target whose include path points into it
+  TPL_PREFIX: ${{ runner.temp }}/tpl
 
 jobs:
   # ---- formatting, checked and never fixed ----------------------------------
